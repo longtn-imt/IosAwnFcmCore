@@ -1,0 +1,6 @@
+framework module Pods_IosAwnFcmCore_Example {
+  umbrella header "Pods-IosAwnFcmCore_Example-umbrella.h"
+
+  export *
+  module * { export * }
+}
