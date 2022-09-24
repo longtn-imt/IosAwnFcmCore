@@ -20,10 +20,54 @@ open class AwesomeFcmService {
     
     public init(){}
     
-    public func handleRemoteNotification(
+    public func didReceiveRemoteNotification(
+        userInfo: [AnyHashable : Any],
+        fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void
+    ) -> Bool {
+        let start = DispatchTime.now()
+        let aps = userInfo["aps"] as? [String: AnyObject]
+        if aps?["content-available"] as? Int == 1 {
+            return handleSilentData(
+                        userInfo: userInfo,
+                        source: FcmSource.ReceiveRemote) { [self] success, error in
+                            if success {
+                                completionHandler(.newData)
+                            } else if error == nil {
+                                completionHandler(.noData)
+                            } else {
+                                completionHandler(.failed)
+                            }
+
+                            let end = DispatchTime.now()
+                            let nanoTime = end.uptimeNanoseconds - start.uptimeNanoseconds // <<<<< Difference in nano seconds (UInt64)
+                            let timeInterval:Double = Double(nanoTime) / 1_000_000_000 // Technically could overflow for long running tests
+                            Logger.d(TAG, "Background silent push execution finished in \(timeInterval.rounded())ms")
+                        }
+        } else {
+            return handleRemoteNotification(
+                    userInfo: userInfo) { [self] success, notificationContent, error in
+                        if success {
+                            completionHandler(.newData)
+                        } else if error == nil {
+                            completionHandler(.noData)
+                        } else {
+                            completionHandler(.failed)
+                        }
+
+                        let end = DispatchTime.now()
+                        let nanoTime = end.uptimeNanoseconds - start.uptimeNanoseconds // <<<<< Difference in nano seconds (UInt64)
+                        let timeInterval:Double = Double(nanoTime) / 1_000_000_000 // Technically could overflow for long running tests
+                        Logger.d(TAG, "Remote push notification execution finished in \(timeInterval.rounded())ms")
+                    }
+        }
+    }
+    
+    func handleRemoteNotification(
         userInfo: [AnyHashable : Any],
         completionHandler: @escaping (Bool, UNNotificationContent?, Error?) -> Void
     ) -> Bool {
+        
+        DefaultsManager.shared.checkIfAppGroupConnected()
         
         let initialLifeCycle:NotificationLifeCycle = LifeCycleManager.shared.currentLifeCycle
             
@@ -77,7 +121,7 @@ open class AwesomeFcmService {
         return false
     }
     
-    public func handleSilentData(
+    func handleSilentData(
         userInfo: [AnyHashable : Any],
         source: FcmSource,
         completionHandler: @escaping (Bool, Error?) -> Void
@@ -208,18 +252,20 @@ open class AwesomeFcmService {
         
         do {
             
-            let isDebuggerDettatched = getppid() != 1;
-            if isDebuggerDettatched {
-                if try !LicenseManager.shared.isLicenseKeyValid() {
-                    if !StringUtils.shared.isNullOrEmpty(originalTitle) {
-                        originalTitle = "[DEMO] " + originalTitle!
-                    } else{
-                        if StringUtils.shared.isNullOrEmpty(originalBody) {
-                            originalBody = "[DEMO] " + originalBody!
-                        }
+#if DEBUG   // Debug Mode
+            
+#else
+            let isValid:Bool = try LicenseManager.shared.isLicenseKeyValid()
+            if !isValid {
+                if !StringUtils.shared.isNullOrEmpty(originalTitle) {
+                    originalTitle = "[DEMO] " + originalTitle!
+                } else{
+                    if StringUtils.shared.isNullOrEmpty(originalBody) {
+                        originalBody = "[DEMO] " + originalBody!
                     }
                 }
             }
+#endif
             
             notificationModel.content!.title = originalTitle
             notificationModel.content!.body = originalBody

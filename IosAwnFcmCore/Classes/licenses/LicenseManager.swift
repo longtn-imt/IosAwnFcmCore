@@ -31,16 +31,29 @@ final public class LicenseManager {
         }
         
         do {
-            return try validateRSASignature(
-                packageName: Bundle.main.bundleIdentifier!,
+            let isValidated:Bool = try validateRSASignature(
+                packageName: getMainBundle().bundleIdentifier!,
                 licenseKey: licenseKey,
                 publicKey: Crypto.pemPublicKey,
                 signProtocol: .rsaSignatureMessagePKCS1v15SHA256
             )
+            return isValidated
         } catch {
             Logger.e(TAG, error.localizedDescription)
             return false
         }
+    }
+    
+    func getMainBundle() -> Bundle {
+        var components = Bundle.main.bundleURL.path.split(separator: "/")
+        var bundle: Bundle?
+
+        if let index = components.lastIndex(where: { $0.hasSuffix(".app") }) {
+            components.removeLast((components.count - 1) - index)
+            bundle = Bundle(path: components.joined(separator: "/"))
+        }
+
+        return bundle ?? Bundle.main
     }
     
     func validateRSASignature(

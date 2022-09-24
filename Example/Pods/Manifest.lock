@@ -4,9 +4,9 @@ PODS:
   - FBSnapshotTestCase/Core (2.1.4)
   - FBSnapshotTestCase/SwiftSupport (2.1.4):
     - FBSnapshotTestCase/Core
-  - IosAwnCore (0.7.0-alpha.2)
-  - IosAwnFcmCore (0.7.0-alpha.2):
-    - IosAwnCore (= 0.7.0-alpha.2)
+  - IosAwnCore (0.7.0-alpha.3)
+  - IosAwnFcmCore (0.7.0-alpha.3):
+    - IosAwnCore (= 0.7.0-alpha.3)
 
 DEPENDENCIES:
   - FBSnapshotTestCase (~> 2.1.4)
@@ -23,9 +23,9 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   FBSnapshotTestCase: 094f9f314decbabe373b87cc339bea235a63e07a
-  IosAwnCore: 09fd0e73b9b3c2d82305c07628286c2a524526aa
-  IosAwnFcmCore: 777aa47531f80581015fa39ff2b513ed1607d216
+  IosAwnCore: e1d1551a7c11aaac771a6f438a45c14771a176b1
+  IosAwnFcmCore: 4671d84941d41e7eef78b5d213bf628dded9c127
 
-PODFILE CHECKSUM: d28fb1795a198c69ea4216d15ca991235e0706dd
+PODFILE CHECKSUM: 827c6bd007fa1327716405892e6ad352ba53bb78
 
 COCOAPODS: 1.11.3

@@ -193,7 +193,6 @@
 		01D68F15B53ED8C8F6B06B71ABE98A89 /* Pods-IosAwnFcmCore_Tests-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "Pods-IosAwnFcmCore_Tests-Info.plist"; sourceTree = "<group>"; };
 		0515FF935199D6D89EB5ED2224F79286 /* SilentActionRequest.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SilentActionRequest.swift; path = IosAwnCore/Classes/background/SilentActionRequest.swift; sourceTree = "<group>"; };
 		0572174893EF3D06EB9C49B0DC36E053 /* FcmSource.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FcmSource.swift; sourceTree = "<group>"; };
-		05E4993E28DE2E92002D1AAF /* framework-build.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = "framework-build.sh"; sourceTree = "<group>"; };
 		06479AADA5BD4E8F029C7267EC468C8E /* BadgeManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = BadgeManager.swift; path = IosAwnCore/Classes/managers/BadgeManager.swift; sourceTree = "<group>"; };
 		077A45547450A54FBE43EB8FEEFB6934 /* FBSnapshotTestCase-prefix.pch */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = "FBSnapshotTestCase-prefix.pch"; sourceTree = "<group>"; };
 		07CCF99614B575C9AD7E7E8EC5ADB7ED /* NotificationCalendarModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NotificationCalendarModel.swift; path = IosAwnCore/Classes/models/NotificationCalendarModel.swift; sourceTree = "<group>"; };
@@ -286,12 +285,12 @@
 		8A1D4FFCEB2152F7B2B0BE893F02458F /* CronExpression.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = CronExpression.swift; path = IosAwnCore/Classes/externalLibs/CronExpression.swift; sourceTree = "<group>"; };
 		8D6CA4D6C459425D9FC6FA5C408BB970 /* FormatterExtension.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FormatterExtension.swift; path = IosAwnCore/Classes/extensions/FormatterExtension.swift; sourceTree = "<group>"; };
 		8F2D873245FDFFE4B8260A8AEDE74C00 /* FBSnapshotTestCasePlatform.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; name = FBSnapshotTestCasePlatform.m; path = FBSnapshotTestCase/FBSnapshotTestCasePlatform.m; sourceTree = "<group>"; };
-		90D3E4BCAF2279DFC71B49EB25E975CE /* LICENSE */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
+		90D3E4BCAF2279DFC71B49EB25E975CE /* LICENSE */ = {isa = PBXFileReference; includeInIndex = 1; path = LICENSE; sourceTree = "<group>"; };
 		9306564A490AE0E162C60A221E2D5B62 /* RealDateTime.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RealDateTime.swift; path = IosAwnCore/Classes/extensions/RealDateTime.swift; sourceTree = "<group>"; };
 		9992D0B4DC6EC2E726EF5EC188E4D8EF /* UIImage+Diff.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; name = "UIImage+Diff.h"; path = "FBSnapshotTestCase/Categories/UIImage+Diff.h"; sourceTree = "<group>"; };
 		9CB75AE213B93D4DEF0468D8E5DCDC1C /* FBSnapshotTestCase-dummy.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; path = "FBSnapshotTestCase-dummy.m"; sourceTree = "<group>"; };
 		9D55781DEEF07EE162EA8FAB5B920B40 /* AbstractModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AbstractModel.swift; path = IosAwnCore/Classes/models/AbstractModel.swift; sourceTree = "<group>"; };
-		9D940727FF8FB9C785EB98E56350EF41 /* Podfile */ = {isa = PBXFileReference; explicitFileType = text.script.ruby; includeInIndex = 1; indentWidth = 2; name = Podfile; path = ../Podfile; sourceTree = SOURCE_ROOT; tabWidth = 2; xcLanguageSpecificationIdentifier = xcode.lang.ruby; };
+		9D940727FF8FB9C785EB98E56350EF41 /* Podfile */ = {isa = PBXFileReference; explicitFileType = text.script.ruby; includeInIndex = 1; indentWidth = 2; lastKnownFileType = text; name = Podfile; path = ../Podfile; sourceTree = SOURCE_ROOT; tabWidth = 2; xcLanguageSpecificationIdentifier = xcode.lang.ruby; };
 		A1C1FCC17D1CEF3843F94F72AFC8CADA /* Definitions.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = Definitions.swift; path = IosAwnCore/Classes/Definitions.swift; sourceTree = "<group>"; };
 		A3275962F86E6B95D41C0006542AA0C3 /* UIImage+Snapshot.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; name = "UIImage+Snapshot.m"; path = "FBSnapshotTestCase/Categories/UIImage+Snapshot.m"; sourceTree = "<group>"; };
 		A4CA6C93FD0CCDA3B15C15DD8B42D65F /* StringUtils.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = StringUtils.swift; path = IosAwnCore/Classes/utils/StringUtils.swift; sourceTree = "<group>"; };
@@ -326,7 +325,7 @@
 		D5507DF504A0A16B8EA05B73DA3A402C /* IosAwnFcmCore-prefix.pch */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = "IosAwnFcmCore-prefix.pch"; sourceTree = "<group>"; };
 		D65727B20EFF688C44C08096496236BB /* FloatUtils.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FloatUtils.swift; path = IosAwnCore/Classes/utils/FloatUtils.swift; sourceTree = "<group>"; };
 		D6D0C901B6B5340AFEFAC4E41DB6A4D8 /* NotificationIntervalModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NotificationIntervalModel.swift; path = IosAwnCore/Classes/models/NotificationIntervalModel.swift; sourceTree = "<group>"; };
-		D77D4DD66C727294E58A8B4853616207 /* README.md */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+		D77D4DD66C727294E58A8B4853616207 /* README.md */ = {isa = PBXFileReference; includeInIndex = 1; path = README.md; sourceTree = "<group>"; };
 		DA5E4B332E06BDEE86476217B72E1424 /* Pods-IosAwnFcmCore_Tests-dummy.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; path = "Pods-IosAwnFcmCore_Tests-dummy.m"; sourceTree = "<group>"; };
 		DC61A287E56DC387D50CC4110674D7A7 /* DefaultRingtoneType.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DefaultRingtoneType.swift; path = IosAwnCore/Classes/enumerators/DefaultRingtoneType.swift; sourceTree = "<group>"; };
 		DCECE08EE9B59AC143853294FFC48208 /* DismissedNotificationReceiver.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DismissedNotificationReceiver.swift; path = IosAwnCore/Classes/broadcasters/receivers/DismissedNotificationReceiver.swift; sourceTree = "<group>"; };
@@ -352,7 +351,7 @@
 		F185ED57BA384669A2E2D835484AF20C /* TreeSet.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TreeSet.swift; path = IosAwnCore/Classes/externalLibs/TreeSet.swift; sourceTree = "<group>"; };
 		F4166F78FC100A0555EC7D491433CD78 /* NotificationSource.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NotificationSource.swift; path = IosAwnCore/Classes/enumerators/NotificationSource.swift; sourceTree = "<group>"; };
 		F4E6DE02BFAC3A3259AA804F8BD9A4D1 /* IntUtils.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = IntUtils.swift; path = IosAwnCore/Classes/utils/IntUtils.swift; sourceTree = "<group>"; };
-		F53C2B69982AC733F3ABE5EEA564B9CD /* IosAwnFcmCore.podspec */ = {isa = PBXFileReference; explicitFileType = text.script.ruby; includeInIndex = 1; indentWidth = 2; path = IosAwnFcmCore.podspec; sourceTree = "<group>"; tabWidth = 2; xcLanguageSpecificationIdentifier = xcode.lang.ruby; };
+		F53C2B69982AC733F3ABE5EEA564B9CD /* IosAwnFcmCore.podspec */ = {isa = PBXFileReference; explicitFileType = text.script.ruby; includeInIndex = 1; indentWidth = 2; lastKnownFileType = text; path = IosAwnFcmCore.podspec; sourceTree = "<group>"; tabWidth = 2; xcLanguageSpecificationIdentifier = xcode.lang.ruby; };
 		F7126C33A21167A6867146899EE4F46F /* UNCrontabNotificationTrigger.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = UNCrontabNotificationTrigger.swift; path = IosAwnCore/Classes/extensions/UNCrontabNotificationTrigger.swift; sourceTree = "<group>"; };
 		F84183A225EE56CE2D775E2330786395 /* AwesomeFcmListener.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AwesomeFcmListener.swift; sourceTree = "<group>"; };
 		F96652E51F092BBD9628C8EEB6B7F9BB /* TimeAndDate.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TimeAndDate.swift; path = IosAwnCore/Classes/enumerators/TimeAndDate.swift; sourceTree = "<group>"; };
@@ -465,7 +464,6 @@
 				F53C2B69982AC733F3ABE5EEA564B9CD /* IosAwnFcmCore.podspec */,
 				90D3E4BCAF2279DFC71B49EB25E975CE /* LICENSE */,
 				D77D4DD66C727294E58A8B4853616207 /* README.md */,
-				05E4993E28DE2E92002D1AAF /* framework-build.sh */,
 			);
 			name = Pod;
 			sourceTree = "<group>";
@@ -495,6 +493,7 @@
 			children = (
 				493063044F009B23C47403325DDBDA35 /* AwesomeFcmEventsReceiver.swift */,
 			);
+			name = receivers;
 			path = receivers;
 			sourceTree = "<group>";
 		};
@@ -637,6 +636,7 @@
 				3D827E3EBF82F3E2C230C15DC4EF0753 /* Support Files */,
 				DCA23A323873889189131DFB21D3F2FC /* SwiftSupport */,
 			);
+			name = FBSnapshotTestCase;
 			path = FBSnapshotTestCase;
 			sourceTree = "<group>";
 		};
@@ -654,6 +654,7 @@
 			children = (
 				844BA814965B6A0FCC84982B5F3CA651 /* FcmBroadcastSender.swift */,
 			);
+			name = senders;
 			path = senders;
 			sourceTree = "<group>";
 		};
@@ -763,6 +764,7 @@
 				C27DACD702F3F619888064B8BE503BD7 /* UNMutableNotificationContentExtension.swift */,
 				00A05140A1F52DC97312BB161F480CB5 /* Support Files */,
 			);
+			name = IosAwnCore;
 			path = IosAwnCore;
 			sourceTree = "<group>";
 		};
@@ -1520,7 +1522,8 @@
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRIP_INSTALLED_PRODUCT = NO;
-				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.0;
 				SYMROOT = "${SRCROOT}/../build";
 			};

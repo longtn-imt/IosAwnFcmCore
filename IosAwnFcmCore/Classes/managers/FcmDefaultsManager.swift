@@ -6,11 +6,12 @@
 //
 
 import Foundation
+import IosAwnCore
 
 public class FcmDefaultsManager {
     
     let TAG = "FcmDefaultsManager"
-    let userDefaults:UserDefaults = UserDefaults(suiteName: FcmDefinitions.SHARED_FCM_DEFAULTS)!
+    let userDefaults:UserDefaults = UserDefaults(suiteName: Definitions.USER_DEFAULT_TAG)!
     
     // ************** SINGLETON PATTERN ***********************
     
@@ -50,5 +51,4 @@ public class FcmDefaultsManager {
         get { return String(userDefaults.object(forKey: FcmDefinitions.LICENSE_KEY) as? String ?? "") }
         set { userDefaults.setValue(newValue, forKey: FcmDefinitions.LICENSE_KEY) }
     }
-    
 }
