@@ -32,8 +32,9 @@ open class AwesomeServiceExtension: UNNotificationServiceExtension {
                         return
                     }
                     else {
-                        contentHandler(UNNotificationContent())
-                        return
+                        var emptyContent = UNMutableNotificationContent()
+                        emptyContent.categoryIdentifier = "INVALID"
+                        contentHandler(emptyContent)
                     }
                 })
         }
