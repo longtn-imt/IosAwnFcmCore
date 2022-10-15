@@ -16,6 +16,7 @@ open class AwesomeFcmService {
     var messageId:String?
     var originalTitle:String?
     var originalBody:String?
+    var originalBadge:Int?
     var originalImage:String?
     
     public init(){}
@@ -88,6 +89,7 @@ open class AwesomeFcmService {
                 originalTitle = alert["title"] as? String
                 originalBody  = alert["body"] as? String
             }
+            originalBadge  = aps["badge"] as? Int
         }
         
         if let options = userInfo["fcm_options"] as? NSDictionary {
@@ -212,6 +214,13 @@ open class AwesomeFcmService {
             mapData[Definitions.NOTIFICATION_MODEL_CONTENT]  = JsonUtils.fromJson(userInfo[Definitions.NOTIFICATION_MODEL_CONTENT] as? String)
             mapData[Definitions.NOTIFICATION_MODEL_SCHEDULE] = JsonUtils.fromJson(userInfo[Definitions.NOTIFICATION_MODEL_SCHEDULE] as? String)
             mapData[Definitions.NOTIFICATION_MODEL_BUTTONS]  = JsonUtils.fromJsonArr(userInfo[Definitions.NOTIFICATION_MODEL_BUTTONS] as? String)
+                        
+            if (userInfo[Definitions.NOTIFICATION_MODEL_IOS] != nil) {
+                let iosCustomData:[String:Any?]? = JsonUtils.fromJson(userInfo[Definitions.NOTIFICATION_MODEL_IOS] as? String)
+                if iosCustomData != nil {
+                    mapData = MapUtils<[String:Any?]>.deepMerge(mapData, iosCustomData!)
+                }
+            }
             
             if notificationModel.fromMap(arguments: mapData) == nil {
                 throw ExceptionFactory
@@ -225,6 +234,7 @@ open class AwesomeFcmService {
             
             originalTitle = notificationModel.content?.title ?? originalTitle
             originalBody = notificationModel.content?.body ?? originalBody
+            originalBadge = notificationModel.content?.badge ?? originalBadge
             
         }
         else {
@@ -237,6 +247,7 @@ open class AwesomeFcmService {
             notificationModel.content!.channelKey = channelList.first?.channelKey ?? "basic_channel"
             notificationModel.content!.title = originalTitle
             notificationModel.content!.body = originalBody
+            notificationModel.content!.badge = originalBadge
             notificationModel.content!.playSound = true
             
             if !StringUtils.shared.isNullOrEmpty(originalImage) {
@@ -269,6 +280,7 @@ open class AwesomeFcmService {
             
             notificationModel.content!.title = originalTitle
             notificationModel.content!.body = originalBody
+            notificationModel.content!.badge = originalBadge
             
             contentInProgress.userInfo[Definitions.NOTIFICATION_MODEL_CONTENT] = notificationModel.toMap()
             
