@@ -1,6 +1,6 @@
 {
   "name": "IosAwnFcmCore",
-  "version": "0.7.2",
+  "version": "0.7.3",
   "summary": "Awesome Notifications Firebase Core.",
   "description": "TODO: Add long description of the pod here.",
   "homepage": "https://github.com/Rafael Setragni/IosAwnFcmCore",
@@ -13,11 +13,11 @@
   },
   "source": {
     "git": "https://github.com/rafaelsetragni/IosAwnFcmCore.git",
-    "tag": "0.7.2"
+    "tag": "0.7.3"
   },
   "dependencies": {
     "IosAwnCore": [
-      "0.7.2"
+      "0.7.3"
     ]
   },
   "source_files": "IosAwnFcmCore/Classes/**/*",
@@ -29,7 +29,8 @@
   "pod_target_xcconfig": {
     "SKIP_INSTALL": "NO",
     "ENABLE_BITCODE": "NO",
-    "APPLICATION_EXTENSION_API_ONLY": "NO"
+    "APPLICATION_EXTENSION_API_ONLY": "NO",
+    "BUILD_LIBRARY_FOR_DISTRIBUTION": "YES"
   },
   "swift_version": "5.3"
 }
