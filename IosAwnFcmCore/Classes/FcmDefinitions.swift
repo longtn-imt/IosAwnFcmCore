@@ -27,8 +27,8 @@ public enum FcmDefinitions {
     public static let  EXTRA_SILENT_DATA = "silentData"
 
     public static let  DEBUG_MODE = "debug"
-    public static let  SILENT_HANDLE = "awesomeSilentHandle"
-    public static let  DART_BG_HANDLE = "awesomeDartBGHandle"
+    public static let  SILENT_HANDLE = "fcmSilentHandle"
+    public static let  DART_BG_HANDLE = "fcmDartBGHandle"
 
     public static let  NOTIFICATION_TOPIC = "topic"
 
