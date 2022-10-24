@@ -18,7 +18,7 @@ public enum FcmDefinitions {
     public static let  BROADCAST_SILENT_DATA = "me.carda.awesome_notifications_fcm.services.silentData"
 
     public static let  SHARED_FCM_DEFAULTS = "fcmDefaults"
-    public static let  LICENSE_KEY = "licenseKey"
+    public static let  LICENSE_KEYS = "licenseKeys"
 
     public static let  FIREBASE_FLAG_IS_SILENT_DATA = "isSilentData"
     public static let  FIREBASE_ENABLED = "FIREBASE_ENABLED"

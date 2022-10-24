@@ -25,23 +25,27 @@ final public class LicenseManager {
     // ********************************************************
         
     public func isLicenseKeyValid() throws -> Bool {
-        let licenseKey:String = FcmDefaultsManager.shared.licenseKey
-        if StringUtils.shared.isNullOrEmpty(licenseKey){
+        let licenseKeys:[String] = FcmDefaultsManager.shared.licenseKeys
+        if licenseKeys.isEmpty {
             return false
         }
         
-        do {
-            let isValidated:Bool = try validateRSASignature(
-                packageName: getMainBundle().bundleIdentifier!,
-                licenseKey: licenseKey,
-                publicKey: Crypto.pemPublicKey,
-                signProtocol: .rsaSignatureMessagePKCS1v15SHA256
-            )
-            return isValidated
-        } catch {
-            Logger.e(TAG, error.localizedDescription)
-            return false
+        for licenseKey:String in licenseKeys {
+            
+            do {
+                let isValidated:Bool = try validateRSASignature(
+                    packageName: getMainBundle().bundleIdentifier!,
+                    licenseKey: licenseKey,
+                    publicKey: Crypto.pemPublicKey,
+                    signProtocol: .rsaSignatureMessagePKCS1v15SHA256
+                )
+                if isValidated { return true }
+            } catch {
+                Logger.e(TAG, error.localizedDescription)
+                return false
+            }
         }
+        return false
     }
     
     func getMainBundle() -> Bundle {
@@ -63,9 +67,12 @@ final public class LicenseManager {
         signProtocol:SecKeyAlgorithm
     ) throws -> Bool {
         
-        let signedData: Data = packageName.data(using: .utf8)!
-        let signature: Data = Data(base64Encoded: licenseKey)!
-        let publicKeyData: Data = Data(base64Encoded: Crypto.pemPublicKey, options: [])!
+        guard let signedData: Data = packageName.data(using: .utf8),
+              let signature: Data = Data(base64Encoded: licenseKey),
+              let publicKeyData: Data = Data(base64Encoded: Crypto.pemPublicKey, options: [])
+        else {
+            return false
+        }
         
         var error: Unmanaged<CFError>?
         guard let publicKey = SecKeyCreateWithData(
