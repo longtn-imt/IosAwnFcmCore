@@ -8,7 +8,7 @@
 
 Pod::Spec.new do |s|
   s.name             = 'IosAwnFcmCore'
-  s.version          = '0.7.5'
+  s.version          = '0.7.6'
   s.summary          = 'Awesome Notifications Firebase Core.'
 
 
@@ -23,7 +23,9 @@ TODO: Add long description of the pod here.
   s.source           = { :git => 'https://github.com/rafaelsetragni/IosAwnFcmCore.git', :tag => s.version.to_s }
   # s.social_media_url = 'https://twitter.com/<TWITTER_USERNAME>'
 
-  s.dependency 'IosAwnCore', '0.7.3'
+  s.dependency 'IosAwnCore', '~> 0.7.7'
+  s.dependency 'FirebaseCore'
+  s.dependency 'Firebase/Messaging'
 
   s.source_files = 'IosAwnFcmCore/Classes/**/*'
   

@@ -32,7 +32,7 @@ public class AwesomeFcmEventsReceiver {
         fcmEventListeners.append(listener)
         
         if debug {
-            Logger.d(TAG, String(describing: listener) + " subscribed to receive FCM events")
+            Logger.shared.d(TAG, String(describing: listener) + " subscribed to receive FCM events")
         }
         return self
     }
@@ -41,17 +41,17 @@ public class AwesomeFcmEventsReceiver {
         if let index = fcmEventListeners.firstIndex(where: {$0 === listener}) {
             fcmEventListeners.remove(at: index)
             if debug {
-                Logger.d(TAG, String(describing: listener) + " unsubscribed from FCM events")
+                Logger.shared.d(TAG, String(describing: listener) + " unsubscribed from FCM events")
             }
         }
         return self
     }
     
-    public func addNewTokenEvent(
+    public func addNewFcmTokenEvent(
         withToken token:String?
     ){
         if debug && fcmEventListeners.isEmpty {
-            Logger.e(TAG, "New FCM token event ignored, as there is no listeners waiting for new notification events")
+            Logger.shared.e(TAG, "New FCM token event ignored, as there is no listeners waiting for new notification events")
         }
         
         for listener in fcmEventListeners {
@@ -63,7 +63,7 @@ public class AwesomeFcmEventsReceiver {
         withToken token:String?
     ){
         if debug && fcmEventListeners.isEmpty {
-            Logger.e(TAG, "New Native token event ignored, as there is no listeners waiting for new notification events")
+            Logger.shared.e(TAG, "New Native token event ignored, as there is no listeners waiting for new notification events")
         }
         
         for listener in fcmEventListeners {

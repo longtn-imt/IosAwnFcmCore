@@ -100,7 +100,7 @@ public class AwesomeNotifications:
             .subscribeOnNotificationEvents(listener: self)
             .subscribeOnActionEvents(listener: self)
         
-        Logger.d(TAG, "Awesome notifications \(self.hash) attached to app instance");
+        Logger.shared.d(TAG, "Awesome notifications \(self.hash) attached to app instance")
     }
     
     public func detachAsMainInstance(listener: AwesomeEventListener){
@@ -117,7 +117,7 @@ public class AwesomeNotifications:
             .unsubscribeOnNotificationEvents(listener: self)
             .unsubscribeOnActionEvents(listener: self)
         
-        Logger.d(TAG, "Awesome notifications \(self.hash) detached from app instance");
+        Logger.shared.d(TAG, "Awesome notifications \(self.hash) detached from app instance")
     }
     
     public func dispose(){
@@ -185,24 +185,44 @@ public class AwesomeNotifications:
                     .shared
                     .handlePermissionResult()
                 do {
-                    if (
-                        DefaultsManager
-                            .shared
-                            .actionCallback != 0){
-                        try recoverNotificationsDisplayed(
-                            withReferenceLifeCycle: .Background
+                    let lostEvents = try LostEventsManager
+                        .shared
+                        .recoverLostNotificationEvents(
+                            withReferenceLifeCycle: .Background,
+                            createdHandle: DefaultsManager.shared.createdCallback,
+                            displayedHandle: DefaultsManager.shared.displayedCallback,
+                            actionHandle: DefaultsManager.shared.actionCallback,
+                            dismissedHandle: DefaultsManager.shared.dismissedCallback
                         )
-                    }
-                } catch {
                     
+                    for lostEvent in lostEvents {
+                        notifyNotificationEvent(
+                            eventName: lostEvent.eventName,
+                            notificationReceived: lostEvent.notificationContent)
+                    }
+                    
+                    RefreshSchedulesReceiver()
+                            .refreshSchedules()
+                    
+                } catch {
+                    if !(error is AwesomeNotificationsException) {
+                        ExceptionFactory
+                            .shared
+                            .registerNewAwesomeException(
+                                className: TAG,
+                                code: ExceptionCode.CODE_UNKNOWN_EXCEPTION,
+                                message: "An unknow exception was found while recovering lost events",
+                                detailedCode: ExceptionCode.DETAILED_UNEXPECTED_ERROR,
+                                originalException: error)
+                    }
                 }
                 break
             
-            case .Background:
-                break
-                
-            
-            case .AppKilled:
+            case .Background: fallthrough
+            case .Terminated:
+                DefaultsManager
+                    .shared
+                    .registerLastDisplayedDate()
                 break
         }
     }
@@ -299,70 +319,39 @@ public class AwesomeNotifications:
     
     // ***************************************************************************************
     
-    public func setActionHandle(actionHandle:Int64, recoveringLostDisplayed recoverDisplayed: Bool) throws {
+    public func setEventsHandle(
+        createdHandle:Int64,
+        displayedHandle:Int64,
+        actionHandle:Int64,
+        dismissedHandle:Int64
+    ) throws {
         
-        DefaultsManager
+        DefaultsManager.shared.actionCallback = actionHandle
+        DefaultsManager.shared.createdCallback = createdHandle
+        DefaultsManager.shared.displayedCallback = displayedHandle
+        DefaultsManager.shared.dismissedCallback = dismissedHandle
+        
+        let lostEvents = try LostEventsManager
             .shared
-            .actionCallback = actionHandle
-        
-        if actionHandle != 0 {
-            try recoverLostEvents()
+            .recoverLostNotificationEvents(
+                withReferenceLifeCycle: .Terminated,
+                createdHandle: createdHandle,
+                displayedHandle: displayedHandle,
+                actionHandle: actionHandle,
+                dismissedHandle: dismissedHandle
+            )
+                
+        for lostEvent in lostEvents {
+            notifyNotificationEvent(
+                eventName: lostEvent.eventName,
+                notificationReceived: lostEvent.notificationContent)
         }
-    }
-    
-    public func recoverLostEvents() throws {
-        try recoverNotificationsCreated()
-        try recoverNotificationsDisplayed(withReferenceLifeCycle: .AppKilled)
-        try recoverNotificationsDismissed()
-        try recoverNotificationActions()
     }
     
     public func getActionHandle() -> Int64 {
         return DefaultsManager
                     .shared
                     .actionCallback
-    }
-    
-    public func listAllPendingSchedules(
-        whenGotResults completionHandler: @escaping ([NotificationModel]) -> Void
-    ){
-        
-        UNUserNotificationCenter.current().getPendingNotificationRequests(completionHandler: { activeSchedules in
-            
-            var serializeds:[[String:Any?]]  = []
-            
-            if activeSchedules.count > 0 {
-                let schedules = ScheduleManager.listSchedules()
-                
-                if(!ListUtils.isNullOrEmpty(schedules)){
-                    for notificationModel in schedules {
-                        var founded = false
-                        for activeSchedule in activeSchedules {
-                            if activeSchedule.identifier == String(notificationModel.content!.id!) {
-                                founded = true
-                                let serialized:[String:Any?] = notificationModel.toMap()
-                                serializeds.append(serialized)
-                                break;
-                            }
-                        }
-                        if(!founded){
-                            _ = CancellationManager
-                                    .shared
-                                    .cancelSchedule(byId: notificationModel.content!.id!)
-                        }
-                    }
-                }
-                
-                completionHandler(schedules)
-                
-            } else {
-                _ = CancellationManager
-                        .shared
-                        .cancelAllSchedules()
-                
-                completionHandler([])
-            }
-        })
     }
     
     public func isApplicationInDebug() -> Bool {
@@ -405,7 +394,7 @@ public class AwesomeNotifications:
         AwesomeNotifications.debug = debug
         
         if(AwesomeNotifications.debug){
-            Logger.d(TAG, "Awesome Notifications initialized")
+            Logger.shared.d(TAG, "Awesome Notifications initialized")
         }
     }
     
@@ -416,86 +405,109 @@ public class AwesomeNotifications:
     
     // *****************************  RECOVER FUNCTIONS  **********************************
     
+    let timeoutLockedProcess:TimeInterval = 3
+    
     private func recoverNotificationsCreated() throws {
-        let lostCreated = CreatedManager.listCreated()
+        let lostCreated = CreatedManager
+            .shared
+            .listCreated()
+        
         for createdNotification in lostCreated {
-            
             try createdNotification.validate()
             
             notifyNotificationEvent(
                 eventName: Definitions.EVENT_NOTIFICATION_CREATED,
                 notificationReceived: createdNotification)
             
-            if !CreatedManager.removeCreated(id: createdNotification.id!) {
-                Logger.e(TAG, "Created event \(createdNotification.id!) could not be cleaned")
-            }
+            _ = CreatedManager
+                .shared
+                .removeCreated(
+                    id: createdNotification.id!,
+                    createdDate: createdNotification.createdDate!)
         }
+        
+        CreatedManager
+            .shared
+            .removeAllCreated()
+        
+        CreatedManager
+            .shared
+            .commit()
     }
     
     private func recoverNotificationsDisplayed(
-        withReferenceLifeCycle lifeCycle:NotificationLifeCycle
+        withCurrentSchedules currentSchedules:[NotificationModel],
+        withReferenceLifeCycle referenceLifeCycle:NotificationLifeCycle
     ) throws {
-        
-        let lastRecoveredDate:RealDateTime =
+        let lastDisplayedDate:RealDateTime =
                         DefaultsManager
                             .shared
                             .lastDisplayedDate
         
-        DisplayedManager.reloadLostSchedulesDisplayed(referenceDate: Date())
+        let currentDate = RealDateTime()
         
-        let lostDisplayed = DisplayedManager.listDisplayed()
+        DisplayedManager
+            .shared
+            .reloadLostSchedulesDisplayed(
+                schedules: currentSchedules,
+                lastDisplayedDate: lastDisplayedDate,
+                untilDate: currentDate)
+        
+        let lostDisplayed = DisplayedManager.shared.listDisplayed()
         for displayedNotification in lostDisplayed {
             
             guard let displayedDate:RealDateTime = displayedNotification.displayedDate ?? displayedNotification.createdDate
-            else {
-                continue
-            }
+            else { continue }
             
-            if(lastRecoveredDate < displayedDate){
+            if currentDate >= displayedDate && lastDisplayedDate <= displayedDate {
                 try displayedNotification.validate()
-                displayedNotification.displayedLifeCycle = lifeCycle
                 
                 notifyNotificationEvent(
                     eventName: Definitions.EVENT_NOTIFICATION_DISPLAYED,
                     notificationReceived: displayedNotification)
             }
             
-            if !DisplayedManager.removeDisplayed(id: displayedNotification.id!) {
-                Logger.e(TAG, "Displayed event \(displayedNotification.id!) could not be cleaned")
+            if !DisplayedManager
+                .shared
+                .removeDisplayed(
+                    id: displayedNotification.id!,
+                    displayedDate: displayedNotification.displayedDate!)
+            {
+                Logger.shared.e(TAG, "Displayed event \(displayedNotification.id!) could not be cleaned")
             }
         }
+        
+        DefaultsManager
+            .shared
+            .registerLastDisplayedDate()
     }
     
-    private func recoverNotificationsDismissed() throws {
-        let lostDismissed = DismissedManager.listDismissed()
-        for dismissedNotification in lostDismissed {
+    func regenerateScheduledDisplayedDates(startDate: Date, endDate: Date) -> [Date:[String:Any?]] {
+        var displayDates = [Date:[String:Any?]]()
+        let center = UNUserNotificationCenter.current()
+        
+        center.getPendingNotificationRequests { (requests) in
+            let calendar = Calendar.current
             
-            try dismissedNotification.validate()
-            
-            notifyActionEvent(
-                fromEventNamed: Definitions.EVENT_NOTIFICATION_DISMISSED,
-                withActionReceived: dismissedNotification)
-            
-            if !DismissedManager.removeDismissed(id: dismissedNotification.id!) {
-                Logger.e(TAG, "Dismissed event \(dismissedNotification.id!) could not be cleaned")
+            for request in requests {
+                guard let trigger = request.trigger as? UNCalendarNotificationTrigger
+                else { continue }
+                
+                guard let jsonData:[String:Any?] = request.content.userInfo[Definitions.NOTIFICATION_JSON] as? [String:Any?]
+                else { continue }
+                
+                let nextTriggerDate = trigger.nextTriggerDate()!
+                
+                if nextTriggerDate >= startDate && nextTriggerDate <= endDate {
+                    let components = calendar.dateComponents([.year, .month, .day, .hour, .minute, .second], from: nextTriggerDate)
+                    let displayDate = calendar.date(from: components)!
+                    
+                    displayDates[displayDate] = jsonData
+                }
             }
         }
-    }
-    
-    private func recoverNotificationActions() throws {
-        let lostActions = ActionManager.recoverActions()
-        for notificationAction in lostActions {
-            
-            try notificationAction.validate()
-            
-            notifyActionEvent(
-                fromEventNamed: Definitions.EVENT_DEFAULT_ACTION,
-                withActionReceived: notificationAction)
-            
-            if !ActionManager.removeAction(id: notificationAction.id!) {
-                Logger.e(TAG, "Action event \(notificationAction.id!) could not be cleaned")
-            }
-        }
+        
+        return displayDates
     }
     
     // *****************************  IOS NOTIFICATION CENTER METHODS  **********************************
@@ -506,20 +518,17 @@ public class AwesomeNotifications:
         
         UNUserNotificationCenter.current().delegate = self
         
-        RefreshSchedulesReceiver()
-                .refreshSchedules()
-        
         AwesomeNotifications.didFinishLaunch = true
         if AwesomeNotifications.completionHandlerGetInitialAction != nil {
             AwesomeNotifications
                 .completionHandlerGetInitialAction!(
-                    ActionManager.getInitialAction(
+                    ActionManager.shared.getInitialAction(
                         removeFromEvents: AwesomeNotifications.removeFromEvents))
         }
         
             
         if AwesomeNotifications.debug {
-            Logger.d(TAG, "Awesome Notifications attached for iOS")
+            Logger.shared.d(TAG, "Awesome Notifications attached for iOS")
         }
     }
     
@@ -529,7 +538,7 @@ public class AwesomeNotifications:
         didReceive response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void
     ){
-        Logger.d(TAG, "Notification Category Identifier (action): \(response.notification.request.content.categoryIdentifier)")
+        Logger.shared.d(TAG, "Notification Category Identifier (action): \(response.notification.request.content.categoryIdentifier)")
         do {
             switch response.actionIdentifier {
             
@@ -612,33 +621,46 @@ public class AwesomeNotifications:
                 .jsonDataToNotificationModel(
                     jsonData: jsonData)
         {
-            StatusBarManager
-                .shared
-                .showNotificationOnStatusBar(
-                    withNotificationModel: notificationModel,
-                    whenFinished: { (notificationDisplayed:Bool, mustPlaySound:Bool) in
-                        
-                        if !notificationDisplayed && self._originalNotificationCenterDelegate != nil {
-                            self._originalNotificationCenterDelegate?
-                                .userNotificationCenter?(
-                                    center,
-                                    willPresent: notification,
-                                    withCompletionHandler: completionHandler)
-                        }
-                        else {
-                            if notificationDisplayed {
-                                if mustPlaySound {
-                                    completionHandler([.alert, .badge, .sound])
-                                }
-                                else {
-                                    completionHandler([.alert, .badge])
-                                }
+            do {
+                try StatusBarManager
+                    .shared
+                    .showNotificationOnStatusBar(
+                        withNotificationModel: notificationModel,
+                        whenFinished: { (notificationDisplayed:Bool, mustPlaySound:Bool) in
+                            
+                            if !notificationDisplayed && self._originalNotificationCenterDelegate != nil {
+                                self._originalNotificationCenterDelegate?
+                                    .userNotificationCenter?(
+                                        center,
+                                        willPresent: notification,
+                                        withCompletionHandler: completionHandler)
                             }
                             else {
-                                completionHandler([])
+                                if notificationDisplayed {
+                                    if mustPlaySound {
+                                        completionHandler([.alert, .badge, .sound])
+                                    }
+                                    else {
+                                        completionHandler([.alert, .badge])
+                                    }
+                                }
+                                else {
+                                    completionHandler([])
+                                }
                             }
-                        }
-                    })
+                        })
+            } catch {
+                if !(error is AwesomeNotificationsException) {
+                    ExceptionFactory
+                        .shared
+                        .registerNewAwesomeException(
+                            className: TAG,
+                            code: ExceptionCode.CODE_UNKNOWN_EXCEPTION,
+                            message: "An unknow exception was found while displaying a notification on Statusbar",
+                            detailedCode: ExceptionCode.DETAILED_UNEXPECTED_ERROR,
+                            originalException: error)
+                }
+            }
             
         }
         else {
@@ -655,7 +677,21 @@ public class AwesomeNotifications:
         }
         
         do {
-            try recoverLostEvents()
+            let lostEvents = try LostEventsManager
+                .shared
+                .recoverLostNotificationEvents(
+                    withReferenceLifeCycle: .Foreground,
+                    createdHandle: DefaultsManager.shared.createdCallback,
+                    displayedHandle: DefaultsManager.shared.displayedCallback,
+                    actionHandle: DefaultsManager.shared.actionCallback,
+                    dismissedHandle: DefaultsManager.shared.dismissedCallback
+                )
+            
+            for lostEvent in lostEvents {
+                notifyNotificationEvent(
+                    eventName: lostEvent.eventName,
+                    notificationReceived: lostEvent.notificationContent)
+            }
         } catch {
             if !(error is AwesomeNotificationsException) {
                 ExceptionFactory
@@ -743,21 +779,10 @@ public class AwesomeNotifications:
         fixedDate: String,
         timeZoneName: String
     ) -> RealDateTime? {
-        
         let fixedDateTime:RealDateTime = RealDateTime.init(
             fromDateText: fixedDate, inTimeZone: timeZoneName) ?? RealDateTime()
-        
-        guard let nextValidDate:Date =
-            DateUtils
-                .shared
-                .getNextValidDate(
-                    fromScheduleModel: scheduleModel,
-                    withReferenceDate: fixedDateTime)
-        else {
-            return nil
-        }
-        
-        return RealDateTime.init(fromDate: nextValidDate, inTimeZone: fixedDateTime.timeZone)
+        scheduleModel.createdDate = fixedDateTime
+        return scheduleModel.getNextValidDate(referenceDate: fixedDateTime)
     }
     
     public func getLocalTimeZone() -> TimeZone {
@@ -802,7 +827,7 @@ public class AwesomeNotifications:
     
     public func getInitialAction(removeFromEvents:Bool, completionHandler: @escaping (ActionReceived?) -> Void) {
         if AwesomeNotifications.didFinishLaunch {
-            completionHandler(ActionManager.getInitialAction(removeFromEvents: removeFromEvents))
+            completionHandler(ActionManager.shared.getInitialAction(removeFromEvents: removeFromEvents))
             return
         }
         AwesomeNotifications.removeFromEvents = removeFromEvents
@@ -818,7 +843,7 @@ public class AwesomeNotifications:
                     .dismissNotification(byId: id)
         
         if AwesomeNotifications.debug {
-            Logger.d(TAG, "Notification id \(id) dismissed")
+            Logger.shared.d(TAG, "Notification id \(id) dismissed")
         }
         
         return success
@@ -998,5 +1023,43 @@ public class AwesomeNotifications:
                 filteringByChannelKey: channelKey,
                 whenUserReturns: completionHandler)
         
+    }
+    
+    public func setLocalization(languageCode:String?) -> Bool {
+        return LocalizationManager
+            .shared
+            .setLocalization(
+                languageCode: languageCode)
+    }
+    
+    public func getLocalization() -> String {
+        return LocalizationManager
+            .shared
+            .getLocalization()
+    }
+    
+    public func isNotificationActiveOnStatusBar(
+        id:Int,
+        whenFinished completionHandler: @escaping (Bool) -> Void
+    ){
+        return StatusBarManager
+            .shared
+            .isNotificationActiveOnStatusBar(id: id, whenFinished: completionHandler)
+    }
+
+    public func getAllActiveNotificationIdsOnStatusBar(
+        whenFinished completionHandler: @escaping ([Int]) -> Void
+    ){
+        return StatusBarManager
+            .shared
+            .getAllActiveNotificationIdsOnStatusBar(whenFinished: completionHandler)
+    }
+    
+    public func listAllPendingSchedules(
+        whenGotResults completionHandler: @escaping ([NotificationModel]) throws -> Void
+    ){
+        return ScheduleManager
+            .shared
+            .syncAllPendingSchedules(whenGotResults: completionHandler)
     }
 }

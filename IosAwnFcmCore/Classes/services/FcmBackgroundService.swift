@@ -31,7 +31,7 @@ open class FcmBackgroundService {
     public func enqueue(
         silentRequest: FcmSilentDataRequest
     ) throws -> Bool {
-        Logger.d(TAG, "A new Dart background service has started")
+        Logger.shared.d(TAG, "A new Dart background service has started")
         
         let backgroundCallback:Int64 = FcmDefaultsManager.shared.backgroundCallback
         let silentCallback:Int64 = FcmDefaultsManager.shared.silentCallback

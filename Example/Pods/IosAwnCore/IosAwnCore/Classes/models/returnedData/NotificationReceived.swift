@@ -9,6 +9,13 @@ import Foundation
 
 public class NotificationReceived : NotificationContentModel {
     
+    public convenience init?(fromMap arguments: [String : Any?]?){
+        if arguments?.isEmpty ?? true { return nil }
+        
+        guard let contentModel = NotificationContentModel(fromMap: arguments) else { return nil }
+        self.init(contentModel)
+    }
+    
     init(_ contentModel:NotificationContentModel?){
         super.init()
         
@@ -20,7 +27,6 @@ public class NotificationReceived : NotificationContentModel {
         self.body = contentModel!.body
         self.summary = contentModel!.summary
         self.showWhen = contentModel!.showWhen
-        self.actionButtons = contentModel!.actionButtons
         self.payload = contentModel!.payload
         self.largeIcon = contentModel!.largeIcon
         self.bigPicture = contentModel!.bigPicture

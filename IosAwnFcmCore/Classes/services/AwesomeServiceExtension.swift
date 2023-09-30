@@ -23,7 +23,7 @@ open class AwesomeServiceExtension: UNNotificationServiceExtension {
         self.contentHandler = contentHandler
         self.content = (request.content.mutableCopy() as? UNMutableNotificationContent)
         
-        if let content = content {            
+        if let content = content {
             _ = fcmService.handleRemoteNotification(
                 userInfo: content.userInfo,
                 completionHandler: { success, newContent, error in
@@ -32,7 +32,7 @@ open class AwesomeServiceExtension: UNNotificationServiceExtension {
                         return
                     }
                     else {
-                        var emptyContent = UNMutableNotificationContent()
+                        let emptyContent = self.content ?? UNMutableNotificationContent()
                         emptyContent.categoryIdentifier = "INVALID"
                         contentHandler(emptyContent)
                     }

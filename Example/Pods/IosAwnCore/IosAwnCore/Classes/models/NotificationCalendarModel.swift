@@ -8,6 +8,7 @@
 import Foundation
 
 public class NotificationCalendarModel : NotificationScheduleModel {
+    static let TAG = "NotificationCalendarModel"
     
     var _createdDate:RealDateTime?
     var _timeZone:TimeZone?
@@ -49,43 +50,49 @@ public class NotificationCalendarModel : NotificationScheduleModel {
     /// Specify false to deliver the notification one time. Specify true to reschedule the notification request each time the notification is delivered.
     var repeats:Bool?
     
-    public func fromMap(arguments: [String : Any?]?) -> AbstractModel? {
+    public convenience init?(fromMap arguments: [String : Any?]?){
+        if arguments?.isEmpty ?? true { return nil }
         
-        self._createdDate =
-            MapUtils<RealDateTime>.getRealDateOrDefault(
-                reference: Definitions.NOTIFICATION_CREATED_DATE, arguments: arguments, defaultTimeZone: RealDateTime.utcTimeZone)
-        
-        self._timeZone =
-            MapUtils<TimeZone>.getValueOrDefault(reference: Definitions.NOTIFICATION_SCHEDULE_TIMEZONE, arguments: arguments)
-        
-        self.year = MapUtils<Int>.getValueOrDefault(reference: Definitions.NOTIFICATION_SCHEDULE_YEAR, arguments: arguments)
-        self.month = MapUtils<Int>.getValueOrDefault(reference: Definitions.NOTIFICATION_SCHEDULE_MONTH, arguments: arguments)
-        self.day = MapUtils<Int>.getValueOrDefault(reference: Definitions.NOTIFICATION_SCHEDULE_DAY, arguments: arguments)
-        self.hour = MapUtils<Int>.getValueOrDefault(reference: Definitions.NOTIFICATION_SCHEDULE_HOUR, arguments: arguments)
-        self.minute = MapUtils<Int>.getValueOrDefault(reference: Definitions.NOTIFICATION_SCHEDULE_MINUTE, arguments: arguments)
-        self.second = MapUtils<Int>.getValueOrDefault(reference: Definitions.NOTIFICATION_SCHEDULE_SECOND, arguments: arguments)
-        self.weekday = MapUtils<Int>.getValueOrDefault(reference: Definitions.NOTIFICATION_SCHEDULE_WEEKDAY, arguments: arguments)
-        self.weekOfMonth = MapUtils<Int>.getValueOrDefault(reference: Definitions.NOTIFICATION_SCHEDULE_WEEKOFMONTH, arguments: arguments)
-        self.weekOfYear = MapUtils<Int>.getValueOrDefault(reference: Definitions.NOTIFICATION_SCHEDULE_WEEKOFYEAR, arguments: arguments)
-        
-        self.repeats = MapUtils<Bool>.getValueOrDefault(reference: Definitions.NOTIFICATION_SCHEDULE_REPEATS, arguments: arguments)
-        
-        if (self.year ?? 0) < 0 { self.year = nil }
-        if (self.month ?? 0) < 0 { self.month = nil }
-        if (self.day ?? 0) < 0 { self.day = nil }
-        if (self.hour ?? 0) < 0 { self.hour = nil }
-        if (self.minute ?? 0) < 0 { self.minute = nil }
-        if (self.second ?? 0) < 0 { self.second = nil }
-        if (self.weekday ?? 0) < 0 { self.weekday = nil }
-        if (self.weekOfMonth ?? 0) < 0 { self.weekOfMonth = nil }
-        if (self.weekOfYear ?? 0) < 0 { self.weekOfYear = nil }
-        
-        // https://github.com/rafaelsetragni/awesome_notifications/issues/153#issuecomment-830732722
-        if(self.weekday != nil){
-            self.weekday = self.weekday == 7 ? 1 : (self.weekday! + 1)
+        do {
+            self.init()
+            self._createdDate =
+                MapUtils<RealDateTime>.getRealDateOrDefault(
+                    reference: Definitions.NOTIFICATION_CREATED_DATE, arguments: arguments, defaultTimeZone: RealDateTime.utcTimeZone)
+            
+            self._timeZone =
+                MapUtils<TimeZone>.getValueOrDefault(reference: Definitions.NOTIFICATION_SCHEDULE_TIMEZONE, arguments: arguments)
+            
+            self.year = MapUtils<Int>.getValueOrDefault(reference: Definitions.NOTIFICATION_SCHEDULE_YEAR, arguments: arguments)
+            self.month = MapUtils<Int>.getValueOrDefault(reference: Definitions.NOTIFICATION_SCHEDULE_MONTH, arguments: arguments)
+            self.day = MapUtils<Int>.getValueOrDefault(reference: Definitions.NOTIFICATION_SCHEDULE_DAY, arguments: arguments)
+            self.hour = MapUtils<Int>.getValueOrDefault(reference: Definitions.NOTIFICATION_SCHEDULE_HOUR, arguments: arguments)
+            self.minute = MapUtils<Int>.getValueOrDefault(reference: Definitions.NOTIFICATION_SCHEDULE_MINUTE, arguments: arguments)
+            self.second = MapUtils<Int>.getValueOrDefault(reference: Definitions.NOTIFICATION_SCHEDULE_SECOND, arguments: arguments)
+            self.weekday = MapUtils<Int>.getValueOrDefault(reference: Definitions.NOTIFICATION_SCHEDULE_WEEKDAY, arguments: arguments)
+            self.weekOfMonth = MapUtils<Int>.getValueOrDefault(reference: Definitions.NOTIFICATION_SCHEDULE_WEEKOFMONTH, arguments: arguments)
+            self.weekOfYear = MapUtils<Int>.getValueOrDefault(reference: Definitions.NOTIFICATION_SCHEDULE_WEEKOFYEAR, arguments: arguments)
+            
+            self.repeats = MapUtils<Bool>.getValueOrDefault(reference: Definitions.NOTIFICATION_SCHEDULE_REPEATS, arguments: arguments)
+            
+            if (self.year ?? 0) < 0 { self.year = nil }
+            if (self.month ?? 0) < 0 { self.month = nil }
+            if (self.day ?? 0) < 0 { self.day = nil }
+            if (self.hour ?? 0) < 0 { self.hour = nil }
+            if (self.minute ?? 0) < 0 { self.minute = nil }
+            if (self.second ?? 0) < 0 { self.second = nil }
+            if (self.weekday ?? 0) < 0 { self.weekday = nil }
+            if (self.weekOfMonth ?? 0) < 0 { self.weekOfMonth = nil }
+            if (self.weekOfYear ?? 0) < 0 { self.weekOfYear = nil }
+            
+            // https://github.com/rafaelsetragni/awesome_notifications/issues/153#issuecomment-830732722
+            if(self.weekday != nil){
+                self.weekday = self.weekday == 7 ? 1 : (self.weekday! + 1)
+            }
         }
-
-        return self
+        catch {
+            Logger.shared.e(Self.TAG, error.localizedDescription)
+            return nil
+        }
     }
 
     public func toMap() -> [String : Any?] {
@@ -166,40 +173,60 @@ public class NotificationCalendarModel : NotificationScheduleModel {
         return dateComponents
     }
     
-    public func getNextValidDate() -> RealDateTime? {
-        let timeZone:TimeZone = self.timeZone ?? TimeZone.current
-        
-        let referenceDate =
-            (self.repeats ?? true) ?
-                RealDateTime(fromTimeZone: timeZone):
-                createdDate ?? RealDateTime(fromTimeZone: timeZone)
-        
-        guard let nextValidDate =
-                    DateUtils
-                        .shared
-                        .getNextValidDate(
-                            fromScheduleModel: self,
-                            withReferenceDate: referenceDate)
-        else {
-            return nil
-        }
-        
-        return RealDateTime(
-            fromDate: nextValidDate,
-            inTimeZone: timeZone)
+    public func getNextValidDate(referenceDate: RealDateTime = RealDateTime()) -> RealDateTime? {
+        guard let createdDate = self.createdDate else { return nil }
+        let timeZone = self.timeZone ?? TimeZone.current
+
+        let refDate = self.repeats ?? true ? createdDate : referenceDate
+
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+
+        var dateComponents = self.toDateComponents()
+        dateComponents.calendar = calendar
+        dateComponents.timeZone = timeZone
+
+        guard let nextValidDate = calendar
+            .nextDate(
+                after: refDate.date,
+                matching: dateComponents,
+                matchingPolicy: .nextTime
+            )
+        else { return nil }
+
+        return RealDateTime(fromDate: nextValidDate, inTimeZone: timeZone)
     }
     
-    public func hasNextValidDate() -> Bool {
-        
+    public func getssNextValidDate(referenceDate: RealDateTime = RealDateTime()) -> RealDateTime? {
+        guard let createdDate:RealDateTime = self.createdDate
+        else { return nil }
         let timeZone:TimeZone = self.timeZone ?? TimeZone.current
-        let nowDate:RealDateTime? = RealDateTime(fromTimeZone: timeZone)
         
-        let nextValidDate:RealDateTime? = getNextValidDate()
+        let refDate:RealDateTime =
+            self.repeats ?? true
+                ? createdDate
+                : referenceDate
         
-        return
-            nil != nextValidDate &&
-            nil != nowDate &&
-            nextValidDate! > nowDate!
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        
+        guard let nextValidDate:Date =
+                calendar.nextDate(
+                    after: refDate.date,
+                    matching: toDateComponents(),
+                    matchingPolicy: .nextTime,
+                    repeatedTimePolicy: .first,
+                    direction: .backward)
+        else { return nil }
+
+        let nextRealDate = RealDateTime.init(fromDate: nextValidDate, inTimeZone: timeZone)
+        if nextRealDate < refDate  { return nil }
+
+        return RealDateTime(fromDate: nextValidDate, inTimeZone: timeZone)
+    }
+    
+    public func hasNextValidDate(referenceDate: RealDateTime = RealDateTime()) -> Bool {
+        return getNextValidDate(referenceDate: referenceDate) != nil
     }
 
     public func getUNNotificationTrigger() -> UNNotificationTrigger? {
@@ -215,9 +242,11 @@ public class NotificationCalendarModel : NotificationScheduleModel {
             return trigger
             
         } catch {
-            Logger.e("NotificationCallendarModel", error.localizedDescription)
+            Logger.shared.e("NotificationCallendarModel", error.localizedDescription)
         }
         return nil
     }
+    
+    public func isRepeated() -> Bool { return repeats ?? false }
 }
 

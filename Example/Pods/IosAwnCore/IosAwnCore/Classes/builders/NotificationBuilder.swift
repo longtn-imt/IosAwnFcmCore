@@ -22,20 +22,12 @@ public class NotificationBuilder {
     // ********************************************************
     
     public func jsonDataToNotificationModel(jsonData:[String : Any?]?) -> NotificationModel? {
-        if jsonData?.isEmpty ?? true { return nil }
-
-        let notificationModel:NotificationModel? = NotificationModel().fromMap(arguments: jsonData!) as? NotificationModel
-        return notificationModel
+        return NotificationModel(fromMap: jsonData)
     }
     
     public func jsonToNotificationModel(jsonData:String?) -> NotificationModel? {
         if StringUtils.shared.isNullOrEmpty(jsonData) { return nil }
-        
-        let data:[String:Any?]? = JsonUtils.fromJson(jsonData)
-        if data == nil { return nil }
-        
-        let notificationModel:NotificationModel? = NotificationModel().fromMap(arguments: data!) as? NotificationModel
-        return notificationModel
+        return NotificationModel(fromMap: JsonUtils.fromJson(jsonData))
     }
     
     public func buildNotificationFromJson(jsonData:String?) -> NotificationModel? {
@@ -116,11 +108,13 @@ public class NotificationBuilder {
 
         let nextDate:RealDateTime? = getNextScheduleDate(notificationModel: notificationModel)
         if notificationModel.schedule != nil && nextDate == nil {
-            _ = ScheduleManager.removeSchedule(id: notificationModel.content!.id!)
+            _ = ScheduleManager.shared.removeSchedule(id: notificationModel.content!.id!)
             completion(nil)
             return
         }
-            
+        
+        setCurrentTranslation(notificationModel: notificationModel)
+        
         let content = content ?? buildNotificationContentFromModel(notificationModel: notificationModel)
         
         setTitle(notificationModel: notificationModel, channel: channel, content: content)
@@ -171,7 +165,7 @@ public class NotificationBuilder {
         var previousCategories:[UNNotificationCategory] = []
         previousCategories.append(contentsOf: [category])
         UNUserNotificationCenter.current().setNotificationCategories(Set(previousCategories))            
-        Logger.d(TAG, "Notification Category Identifier: \(category.identifier)")
+        Logger.shared.d(TAG, "Notification Category Identifier: \(category.identifier)")
         
         if(notificationModel.schedule != nil){
             
@@ -181,14 +175,15 @@ public class NotificationBuilder {
                 fromTimeZone: notificationModel.schedule!.timeZone!)
             
             if (nextDate != nil){
-                ScheduleManager.saveSchedule(notification: notificationModel, nextDate: nextDate!.date)
+                ScheduleManager.shared.saveSchedule(notification: notificationModel, nextDate: nextDate!.date)
             } else {
-                _ = ScheduleManager.removeSchedule(id: notificationModel.content!.id!)
+                _ = ScheduleManager.shared.removeSchedule(id: notificationModel.content!.id!)
             }
         }
         
+        completion(notificationModel)
+        
         if SwiftUtils.isRunningOnExtension() {
-            completion(notificationModel)
             return
         }
         
@@ -202,9 +197,7 @@ public class NotificationBuilder {
                             message: "Notification could not be created",
                             detailedCode: ExceptionCode.DETAILED_UNEXPECTED_ERROR+".createNotification",
                             originalException: error!)
-                completion(nil)
             }
-            completion(notificationModel)
         }
     }
     
@@ -231,7 +224,67 @@ public class NotificationBuilder {
         content.userInfo[Definitions.NOTIFICATION_CHANNEL_KEY] = notificationModel.content!.channelKey!
         content.userInfo[Definitions.NOTIFICATION_GROUP_KEY] = notificationModel.content!.groupKey
     }
+    
+    private func setCurrentTranslation(notificationModel: NotificationModel) {
+        guard let localizations = notificationModel.localizations, !localizations.isEmpty else { return }
+        
+        let languageCode = LocalizationManager.shared.getLocalization()
+        guard let matchedTranslationCode = getMatchedLanguageCode(localizations, languageCode: languageCode)
+        else { return }
+        
+        guard let localizationModel:NotificationLocalizationModel = localizations[matchedTranslationCode]
+        else { return }
+        
+        if !StringUtils.shared.isNullOrEmpty(localizationModel.title) {
+            notificationModel.content!.title = localizationModel.title
+        }
+        if !StringUtils.shared.isNullOrEmpty(localizationModel.body) {
+            notificationModel.content!.body = localizationModel.body
+        }
+        if !StringUtils.shared.isNullOrEmpty(localizationModel.summary) {
+            notificationModel.content!.summary = localizationModel.summary
+        }
+        if !StringUtils.shared.isNullOrEmpty(localizationModel.largeIcon) {
+            notificationModel.content!.largeIcon = localizationModel.largeIcon
+        }
+        if !StringUtils.shared.isNullOrEmpty(localizationModel.bigPicture) {
+            notificationModel.content!.bigPicture = localizationModel.bigPicture
+        }
 
+        guard
+            let buttonLabels:[String:String] = localizationModel.buttonLabels,
+            let actionButtons:[NotificationButtonModel] = notificationModel.actionButtons
+        else { return }
+        
+        for buttonModel in actionButtons {
+            if let label:String = buttonLabels[buttonModel.key!] {
+                buttonModel.label = label
+            }
+        }
+    }
+
+    private func getMatchedLanguageCode(_ localizations: [String: NotificationLocalizationModel], languageCode: String) -> String? {
+        let lowercaseLanguageCode = languageCode.lowercased(with: Locale(identifier: "en"))
+        if localizations.keys.contains(lowercaseLanguageCode) {
+            return lowercaseLanguageCode
+        }
+
+        let sortedCodeKeys = localizations.sorted(by: { $0.key < $1.key })
+        for (laguangeCode, _) in sortedCodeKeys {
+            let lowercaseKey = laguangeCode.lowercased(with: Locale(identifier: "en"))
+            if lowercaseKey == lowercaseLanguageCode {
+                return laguangeCode
+            }
+            if lowercaseKey.hasPrefix("\(lowercaseLanguageCode)-") {
+                return laguangeCode
+            }
+            if lowercaseLanguageCode.hasPrefix("\(lowercaseKey)-") {
+                return laguangeCode
+            }
+        }
+        return nil
+    }
+    
     private func setTitle(notificationModel:NotificationModel, channel:NotificationChannelModel, content:UNMutableNotificationContent){
         content.title = notificationModel.content!.title?.withoutHtmlTags() ?? ""
     }
@@ -242,7 +295,7 @@ public class NotificationBuilder {
     
     private func setSummary(notificationModel:NotificationModel, content:UNMutableNotificationContent){
         if #available(iOS 12.0, *) {
-            content.summaryArgument = notificationModel.content!.summary?.withoutHtmlTags() ?? ""
+            content.subtitle = notificationModel.content!.summary?.withoutHtmlTags() ?? ""
         }
     }
     
@@ -565,7 +618,7 @@ public class NotificationBuilder {
                     return imageAttachment
                     
                 } catch {
-                    Logger.e(TAG, error.localizedDescription)
+                    Logger.shared.e(TAG, error.localizedDescription)
                 }
             }
         }
@@ -605,22 +658,22 @@ public class NotificationBuilder {
     
     private func setProgressBarLayout(notificationModel:NotificationModel, content:UNMutableNotificationContent) {
         content.categoryIdentifier = "ProgressBar"
-        Logger.w(TAG, "ProgressBar layout are not available yet for iOS")
+        Logger.shared.w(TAG, "ProgressBar layout are not available yet for iOS")
     }
     
     private func setIndeterminateBarLayout(notificationModel:NotificationModel, content:UNMutableNotificationContent) {
         content.categoryIdentifier = "IndeterminateBar"
-        Logger.w(TAG, "IndeterminateBar layout are not available yet for iOS")
+        Logger.shared.w(TAG, "IndeterminateBar layout are not available yet for iOS")
     }
     
     private func setMediaPlayerLayout(notificationModel:NotificationModel, content:UNMutableNotificationContent) {
         content.categoryIdentifier = "MediaPlayer"
-        Logger.w(TAG, "MediaPlayer layout are not available yet for iOS")
+        Logger.shared.w(TAG, "MediaPlayer layout are not available yet for iOS")
     }
     
     private func setInboxLayout(notificationModel:NotificationModel, content:UNMutableNotificationContent) {
         content.categoryIdentifier = "Inbox"
-        Logger.w(TAG, "Imbox layout are not available yet for iOS")
+        Logger.shared.w(TAG, "Imbox layout are not available yet for iOS")
     }
     
     private func setMessagingLayout(notificationModel:NotificationModel, content:UNMutableNotificationContent, isGrouping:Bool) {

@@ -9,16 +9,17 @@ import Foundation
 import IosAwnCore
 
 public class SilentDataModel: AbstractModel {
-    
     public var data:[String:Any?]?
     
     public var createdDate: RealDateTime?
     public var createdSource: NotificationSource?
     public var createdLifeCycle: NotificationLifeCycle?
     
-    public func fromMap(arguments: [String:Any?]?) -> AbstractModel? {
-        data = data ?? [:]
+    
+    public convenience init?(fromMap arguments: [String : Any?]?) {
+        self.init()
         
+        data = data ?? [:]        
         for (key, value) in arguments! {
             switch (key) {
                 
@@ -50,7 +51,7 @@ public class SilentDataModel: AbstractModel {
             }
         }
         
-        return data!.isEmpty ? nil : self
+        if data!.isEmpty { return nil }
     }
     
     public func registerCreationEvent(

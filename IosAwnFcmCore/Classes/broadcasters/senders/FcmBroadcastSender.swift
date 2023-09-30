@@ -28,7 +28,7 @@ public class FcmBroadcastSender {
     public func SendBroadcastNewFcmToken(token:String) {
         AwesomeFcmEventsReceiver
                 .shared
-                .addNewTokenEvent(withToken: token)
+                .addNewFcmTokenEvent(withToken: token)
     }
 
     public func SendBroadcastSilentData(

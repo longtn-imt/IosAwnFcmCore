@@ -43,6 +43,7 @@ public enum FcmDefinitions {
     public static let  CHANNEL_METHOD_IS_FCM_AVAILABLE = "isFirebaseAvailable"
     public static let  CHANNEL_METHOD_SUBSCRIBE_TOPIC = "subscribeTopic"
     public static let  CHANNEL_METHOD_UNSUBSCRIBE_TOPIC = "unsubscribeTopic"
+    public static let  CHANNEL_METHOD_DELETE_TOKEN = "deleteToken"
     public static let  CHANNEL_METHOD_SILENCED_CALLBACK = "silentCallbackReference"
     public static let  CHANNEL_METHOD_DART_CALLBACK = "dartCallbackReference"
     public static let  CHANNEL_METHOD_SHUTDOWN_DART = "shutdown"

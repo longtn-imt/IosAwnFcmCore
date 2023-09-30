@@ -10,6 +10,7 @@ import IosAwnCore
 
 final public class LicenseManager {
     let TAG = "LicenseManager"
+    let APP_VERSION = "0.7.5-pre.1"
     
     // ************** SINGLETON PATTERN ***********************
     
@@ -32,32 +33,60 @@ final public class LicenseManager {
         
         for licenseKey:String in licenseKeys {
             
+            var isSingleVersion:Bool = false
+            var base64Encoded:String? = nil
+            if licenseKey.starts(with: "single:") {
+                isSingleVersion = true
+                if !licenseKey.starts(with: "single:"+APP_VERSION+":") {
+                    continue
+                }
+                let regex = try! NSRegularExpression(pattern: "single:[\\w\\.\\+]+:", options: [])
+                let range = NSRange(location: 0, length: licenseKey.utf16.count)
+                base64Encoded = regex
+                    .stringByReplacingMatches(
+                        in: licenseKey,
+                        options: [],
+                        range: range,
+                        withTemplate: "")
+                
+            } else {
+                base64Encoded = licenseKey
+            }
+            
             do {
                 let isValidated:Bool = try validateRSASignature(
-                    packageName: getMainBundle().bundleIdentifier!,
-                    licenseKey: licenseKey,
+                    packageName:
+                        (isSingleVersion ? APP_VERSION+":" : "") +
+                        SwiftUtils.getMainBundle().bundleIdentifier!,
+                    licenseKey: base64Encoded!,
                     publicKey: Crypto.pemPublicKey,
                     signProtocol: .rsaSignatureMessagePKCS1v15SHA256
                 )
                 if isValidated { return true }
             } catch {
-                Logger.e(TAG, error.localizedDescription)
-                return false
+                Logger.shared.e(TAG, error.localizedDescription)
+                Logger.shared.e(TAG, "Invalid license key: \(licenseKey)")
             }
         }
+        printLicenseMessageError()
         return false
     }
     
-    func getMainBundle() -> Bundle {
-        var components = Bundle.main.bundleURL.path.split(separator: "/")
-        var bundle: Bundle?
-
-        if let index = components.lastIndex(where: { $0.hasSuffix(".app") }) {
-            components.removeLast((components.count - 1) - index)
-            bundle = Bundle(path: components.joined(separator: "/"))
+    public func printValidationTest() throws -> Bool {
+        if try !isLicenseKeyValid() {
+            return false
         }
-
-        return bundle ?? Bundle.main
+        else {
+            Logger.shared.d(TAG,"Awesome Notification's license key validated")
+            return true
+        }
+    }
+    
+    func printLicenseMessageError() {
+        Logger.shared.i(TAG,
+             "You need to insert a valid license key to use Awesome Notification's FCM " +
+                 "plugin in release mode without watermarks (Bundle ID: \"\(SwiftUtils.getMainBundle().bundleIdentifier ?? "")\"). " +
+             "To know more about it, please visit https://www.awesome-notifications.carda.me#prices")
     }
     
     func validateRSASignature(

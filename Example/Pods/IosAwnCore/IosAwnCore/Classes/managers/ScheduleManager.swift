@@ -7,14 +7,30 @@
 
 import Foundation
 
-public class ScheduleManager {
+public class ScheduleManager : EventManager {
     
-    static let shared:SharedManager = SharedManager(tag: "NotificationSchedule")
-    static let pendingShared:SharedManager = SharedManager(tag: "PendingSchedules")
+    private let storage:SharedManager = SharedManager(tag: "NotificationSchedule")
+    private let pendingShared:SharedManager = SharedManager(tag: "PendingSchedules")    
+    private var pendingSchedules:[String:String]
     
-    static var pendingSchedules:[String:String] = pendingShared.get(referenceKey: "pending") as? [String:String] ?? [:]
     
-    public static func removeSchedule( id:Int ) -> Bool {
+    // **************************** SINGLETON PATTERN *************************************
+    
+    static var instance:ScheduleManager?
+    public static var shared:ScheduleManager {
+        get {
+            ScheduleManager.instance =
+            ScheduleManager.instance ?? ScheduleManager()
+            return ScheduleManager.instance!
+        }
+    }
+    private override init(){
+        pendingSchedules = pendingShared.get(referenceKey: "pending") as? [String:String] ?? [:]
+    }
+    
+    // **************************** SINGLETON PATTERN *************************************
+    
+    public func removeSchedule( id:Int ) -> Bool {
         let referenceKey = String(id)
         for (epoch, scheduledId) in pendingSchedules {
             if (scheduledId == referenceKey) {
@@ -22,22 +38,23 @@ public class ScheduleManager {
             }
         }
         updatePendingList()
-        return shared.remove(referenceKey: referenceKey)
+        return storage.remove(referenceKey: referenceKey)
     }
     
-    public static func listSchedules() -> [NotificationModel] {
+    public func listSchedules() -> [NotificationModel] {
         var returnedList:[NotificationModel] = []
-        let dataList = shared.getAllObjects()
+        let dataList = storage.getAllObjects()
         
         for data in dataList {
-            let channel:NotificationModel = NotificationModel().fromMap(arguments: data) as! NotificationModel
-            returnedList.append(channel)
+            guard let schedule = NotificationModel(fromMap: data)
+            else { continue }
+            returnedList.append(schedule)
         }
         
         return returnedList
     }
     
-    public static func listPendingSchedules(referenceDate:Date) -> [NotificationModel] {
+    public func listPendingSchedules(referenceDate:Date) -> [NotificationModel] {
         var returnedList:[NotificationModel] = []
         let referenceEpoch = referenceDate.timeIntervalSince1970.description
         
@@ -53,20 +70,20 @@ public class ScheduleManager {
         return returnedList
     }
     
-    public static func saveSchedule(notification:NotificationModel, nextDate:Date){
+    public func saveSchedule(notification:NotificationModel, nextDate:Date){
         let referenceKey =  String(notification.content!.id!)
         let epoch =  nextDate.secondsSince1970.description
         
         pendingSchedules[epoch] = referenceKey
-        shared.set(notification.toMap(), referenceKey:referenceKey)
+        storage.set(notification.toMap(), referenceKey:referenceKey)
         updatePendingList()
     }
     
-    public static func updatePendingList(){
+    public func updatePendingList(){
         pendingShared.set(pendingSchedules, referenceKey:"pending")
     }
     
-    public static func getEarliestDate() -> Date? {
+    public func getEarliestDate() -> Date? {
         var smallest:String?
         
         for (epoch, _) in pendingSchedules {
@@ -84,24 +101,63 @@ public class ScheduleManager {
         return smallestDate
     }
     
-    public static func getScheduleByKey( id:Int ) -> NotificationModel? {
-        guard let data:[String:Any?] = shared.get(referenceKey: String(id)) else {
-          return nil
-        }
-        return NotificationModel().fromMap(arguments: data) as? NotificationModel
+    public func getScheduleByKey( id:Int ) -> NotificationModel? {
+        return NotificationModel(fromMap: storage.get(referenceKey: String(id)))
     }
     
-    public static func isNotificationScheduleActive( channelKey:String ) -> Bool {
-        return shared.get(referenceKey: channelKey) != nil
+    public func isNotificationScheduleActive( channelKey:String ) -> Bool {
+        return storage.get(referenceKey: channelKey) != nil
     }
     
-    public static func cancelAllSchedules() -> Bool {
-        shared.removeAll()
+    public func cancelAllSchedules() -> Bool {
+        storage.removeAll()
         pendingShared.removeAll()
         return true
     }
 
-    public static func cancelScheduled(id:Int) -> Bool {
-        return shared.remove(referenceKey: String(id))
+    public func cancelScheduled(id:Int) -> Bool {
+        return storage.remove(referenceKey: String(id))
+    }
+        
+    public func syncAllPendingSchedules(
+        whenGotResults completionHandler: @escaping ([NotificationModel]) throws -> Void
+    ){
+        UNUserNotificationCenter.current().getPendingNotificationRequests(completionHandler: { result in
+            do {
+                var serializeds:[[String:Any?]]  = []
+                
+                if result.count == 0 {
+                    _ = CancellationManager.shared.cancelAllSchedules()
+                    try completionHandler([])
+                    return
+                }
+                
+                let schedules = ScheduleManager.shared.listSchedules()
+                if(!ListUtils.isNullOrEmpty(schedules)){
+                    for notificationModel in schedules {
+                        var founded = false
+                        for activeSchedule in result {
+                            if activeSchedule.identifier == String(notificationModel.content!.id!) {
+                                founded = true
+                                let serialized:[String:Any?] = notificationModel.toMap()
+                                serializeds.append(serialized)
+                                break;
+                            }
+                        }
+                        if(!founded){
+                            _ = CancellationManager.shared.cancelSchedule(byId: notificationModel.content!.id!)
+                        }
+                    }
+                }
+                try completionHandler(schedules)
+            } catch {
+                Logger.shared.e("syncAllPendingSchedules", error.localizedDescription)
+                do {
+                    try completionHandler([])
+                } catch {
+                    Logger.shared.e("syncAllPendingSchedules", error.localizedDescription)
+                }
+            }
+        })
     }
 }

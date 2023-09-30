@@ -19,7 +19,6 @@ public class NotificationContentModel : AbstractModel {
     public var summary: String?
     public var showWhen: Bool?
     
-    public var actionButtons:[NotificationButtonModel]?
     public var payload:[String:String?]?
     
     public var wakeUpScreen: Bool?
@@ -58,15 +57,16 @@ public class NotificationContentModel : AbstractModel {
     public init(){}
     
     func registerCreateEvent(
+        withDisplayedDate createdDate: RealDateTime = RealDateTime.init(
+            fromTimeZone: TimeZone(identifier: "UTC")
+        ),
         inLifeCycle lifeCycle: NotificationLifeCycle,
         fromSource createdSource: NotificationSource
     ) -> Bool {
         if(self.createdDate == nil){
             self.createdSource = createdSource
             self.createdLifeCycle = lifeCycle
-            self.createdDate =
-                    RealDateTime.init(
-                        fromTimeZone: RealDateTime.utcTimeZone)
+            self.createdDate = createdDate
             
             return true
         }
@@ -74,12 +74,13 @@ public class NotificationContentModel : AbstractModel {
     }
     
     public func registerDisplayedEvent(
+        withDisplayedDate displayedDate: RealDateTime = RealDateTime.init(
+            fromTimeZone: TimeZone(identifier: "UTC")
+        ),
         inLifeCycle lifeCycle: NotificationLifeCycle
     ){
         self.displayedLifeCycle = lifeCycle
-        self.displayedDate =
-                RealDateTime.init(
-                    fromTimeZone: TimeZone(identifier: "UTC"))
+        self.displayedDate = displayedDate
     }
     
     public func registerLastDisplayedEvent(
@@ -109,8 +110,10 @@ public class NotificationContentModel : AbstractModel {
         }
     }
     
-    public func fromMap(arguments: [String : Any?]?) -> AbstractModel? {
-                
+    public convenience init?(fromMap arguments: [String : Any?]?){
+        if arguments?.isEmpty ?? true { return nil }
+        
+        self.init()
         self.id = MapUtils<Int>.getValueOrDefault(reference: Definitions.NOTIFICATION_ID, arguments: arguments)
         if((id ?? -1) < 0) {
             id = IntUtils.generateNextRandomId();
@@ -167,8 +170,6 @@ public class NotificationContentModel : AbstractModel {
         if StringUtils.shared.isNullOrEmpty(self.bigPicture, considerWhiteSpaceAsEmpty: true) {
             self.bigPicture = nil
         }
-        
-        return self
     }
     
     public func toMap() -> [String : Any?] {
@@ -215,7 +216,7 @@ public class NotificationContentModel : AbstractModel {
     
     func _processRetroCompatibility(fromArguments arguments: [String : Any?]?){
         if arguments?["autoCancel"] != nil {
-            Logger.w(NotificationButtonModel.TAG, "autoCancel is deprecated. Please use autoDismissible instead.")
+            Logger.shared.w(NotificationButtonModel.TAG, "autoCancel is deprecated. Please use autoDismissible instead.")
             autoDismissible = MapUtils<Bool>.getValueOrDefault(reference: "autoCancel", arguments: arguments)
         }
     }

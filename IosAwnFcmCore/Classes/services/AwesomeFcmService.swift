@@ -42,7 +42,7 @@ open class AwesomeFcmService {
                             let end = DispatchTime.now()
                             let nanoTime = end.uptimeNanoseconds - start.uptimeNanoseconds // <<<<< Difference in nano seconds (UInt64)
                             let timeInterval:Double = Double(nanoTime) / 1_000_000_000 // Technically could overflow for long running tests
-                            Logger.d(TAG, "Background silent push execution finished in \(timeInterval.rounded())ms")
+                            Logger.shared.d(TAG, "Background silent push execution finished in \(timeInterval.rounded())ms")
                         }
         } else {
             return handleRemoteNotification(
@@ -58,7 +58,7 @@ open class AwesomeFcmService {
                         let end = DispatchTime.now()
                         let nanoTime = end.uptimeNanoseconds - start.uptimeNanoseconds // <<<<< Difference in nano seconds (UInt64)
                         let timeInterval:Double = Double(nanoTime) / 1_000_000_000 // Technically could overflow for long running tests
-                        Logger.d(TAG, "Remote push notification execution finished in \(timeInterval.rounded())ms")
+                        Logger.shared.d(TAG, "Remote push notification execution finished in \(timeInterval.rounded())ms")
                     }
         }
     }
@@ -68,6 +68,7 @@ open class AwesomeFcmService {
         completionHandler: @escaping (Bool, UNNotificationContent?, Error?) -> Void
     ) -> Bool {
         
+        AwesomeNotifications.awesomeExtensions?.loadExternalExtensions()
         DefaultsManager.shared.checkIfAppGroupConnected()
         
         let initialLifeCycle:NotificationLifeCycle = LifeCycleManager.shared.currentLifeCycle
@@ -82,7 +83,7 @@ open class AwesomeFcmService {
             return false
         }
             
-        Logger.d(TAG, "Received Firebase message id: "+(messageId))
+        Logger.shared.d(TAG, "Received Firebase message id: "+(messageId))
             
         if let aps = userInfo["aps"] as? Dictionary<String, AnyObject> {
             if let alert = aps["alert"]  as? Dictionary<String, AnyObject> {
@@ -145,7 +146,7 @@ open class AwesomeFcmService {
                           detailedCode: ExceptionCode.DETAILED_REQUIRED_ARGUMENTS + ".handleSilentData.message_id")
             }
             
-            Logger.d(TAG, "Received Firebase message id: " + messageId)
+            Logger.shared.d(TAG, "Received Firebase message id: " + messageId)
             
             guard let dataMap:[String:Any?] = userInfo as? [String:Any?] else {
                 throw ExceptionFactory
@@ -157,8 +158,7 @@ open class AwesomeFcmService {
                             detailedCode: FcmExceptionCode.DETAILED_FCM_EXCEPTION+".handleSilentData.userInfo")
             }
             
-            guard let silentData:SilentDataModel =
-                    SilentDataModel().fromMap(arguments: dataMap) as? SilentDataModel
+            guard let silentData:SilentDataModel = SilentDataModel(fromMap: dataMap)
             else {
                 throw ExceptionFactory
                         .shared
@@ -205,7 +205,7 @@ open class AwesomeFcmService {
         completion completionHandler: @escaping (Bool, UNNotificationContent?, Error?) -> Void
     ) throws {
         
-        let notificationModel:NotificationModel = NotificationModel()
+        var notificationModel:NotificationModel? = nil
         
         if userInfo[Definitions.NOTIFICATION_MODEL_CONTENT] != nil {
             
@@ -214,6 +214,7 @@ open class AwesomeFcmService {
             mapData[Definitions.NOTIFICATION_MODEL_CONTENT]  = JsonUtils.fromJson(userInfo[Definitions.NOTIFICATION_MODEL_CONTENT] as? String)
             mapData[Definitions.NOTIFICATION_MODEL_SCHEDULE] = JsonUtils.fromJson(userInfo[Definitions.NOTIFICATION_MODEL_SCHEDULE] as? String)
             mapData[Definitions.NOTIFICATION_MODEL_BUTTONS]  = JsonUtils.fromJsonArr(userInfo[Definitions.NOTIFICATION_MODEL_BUTTONS] as? String)
+            mapData[Definitions.NOTIFICATION_MODEL_LOCALIZATIONS]  = JsonUtils.fromJson(userInfo[Definitions.NOTIFICATION_MODEL_LOCALIZATIONS] as? String)
                         
             if (userInfo[Definitions.NOTIFICATION_MODEL_IOS] != nil) {
                 let iosCustomData:[String:Any?]? = JsonUtils.fromJson(userInfo[Definitions.NOTIFICATION_MODEL_IOS] as? String)
@@ -222,7 +223,8 @@ open class AwesomeFcmService {
                 }
             }
             
-            if notificationModel.fromMap(arguments: mapData) == nil {
+            notificationModel = NotificationModel(fromMap: mapData)
+            if notificationModel == nil {
                 throw ExceptionFactory
                     .shared
                     .createNewAwesomeException(
@@ -232,34 +234,34 @@ open class AwesomeFcmService {
                         detailedCode: ExceptionCode.DETAILED_INVALID_ARGUMENTS+".notificationModel.invalid")
             }
             
-            originalTitle = notificationModel.content?.title ?? originalTitle
-            originalBody = notificationModel.content?.body ?? originalBody
-            originalBadge = notificationModel.content?.badge ?? originalBadge
+            originalTitle = notificationModel!.content?.title ?? originalTitle
+            originalBody = notificationModel!.content?.body ?? originalBody
+            originalBadge = notificationModel!.content?.badge ?? originalBadge
             
         }
         else {
-            
-            notificationModel.content = NotificationContentModel()
+            notificationModel = NotificationModel()
+            notificationModel!.content = NotificationContentModel()
             
             let channelList:[NotificationChannelModel] = ChannelManager.shared.listChannels()
             
-            notificationModel.content!.id = -1
-            notificationModel.content!.channelKey = channelList.first?.channelKey ?? "basic_channel"
-            notificationModel.content!.title = originalTitle
-            notificationModel.content!.body = originalBody
-            notificationModel.content!.badge = originalBadge
-            notificationModel.content!.playSound = true
+            notificationModel!.content!.id = -1
+            notificationModel!.content!.channelKey = channelList.first?.channelKey ?? "basic_channel"
+            notificationModel!.content!.title = originalTitle
+            notificationModel!.content!.body = originalBody
+            notificationModel!.content!.badge = originalBadge
+            notificationModel!.content!.playSound = true
             
             if !StringUtils.shared.isNullOrEmpty(originalImage) {
-                notificationModel.content!.notificationLayout = NotificationLayout.BigPicture
-                notificationModel.content!.bigPicture = originalImage
+                notificationModel!.content!.notificationLayout = NotificationLayout.BigPicture
+                notificationModel!.content!.bigPicture = originalImage
             }
             else {
-                notificationModel.content!.notificationLayout = NotificationLayout.Default
+                notificationModel!.content!.notificationLayout = NotificationLayout.Default
             }
         }
         
-        Logger.d(TAG, "Push notification received")
+        Logger.shared.d(TAG, "Push notification received")
         
         do {
             
@@ -278,15 +280,15 @@ open class AwesomeFcmService {
             }
 #endif
             
-            notificationModel.content!.title = originalTitle
-            notificationModel.content!.body = originalBody
-            notificationModel.content!.badge = originalBadge
+            notificationModel!.content!.title = originalTitle
+            notificationModel!.content!.body = originalBody
+            notificationModel!.content!.badge = originalBadge
             
-            contentInProgress.userInfo[Definitions.NOTIFICATION_MODEL_CONTENT] = notificationModel.toMap()
+            contentInProgress.userInfo[Definitions.NOTIFICATION_MODEL_CONTENT] = notificationModel!.toMap()
             
             try NotificationSenderAndScheduler.send(
                 createdSource: NotificationSource.Firebase,
-                notificationModel: notificationModel,
+                notificationModel: notificationModel!,
                 content: contentInProgress,
                 completion: completionHandler,
                 appLifeCycle: LifeCycleManager.shared.currentLifeCycle)

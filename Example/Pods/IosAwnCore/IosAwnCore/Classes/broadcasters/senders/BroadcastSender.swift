@@ -30,7 +30,7 @@ class BroadcastSender {
         whenFinished completionHandler: @escaping (Bool) -> Void
     ){
         if SwiftUtils.isRunningOnExtension() || LifeCycleManager.shared.currentLifeCycle == .AppKilled {
-            CreatedManager.saveCreated(received: notificationReceived)
+            _ = CreatedManager.shared.saveCreated(received: notificationReceived)
         }
         else {
             AwesomeEventsReceiver
@@ -48,7 +48,7 @@ class BroadcastSender {
         whenFinished completionHandler: @escaping (Bool) -> Void
     ){
         if SwiftUtils.isRunningOnExtension() || LifeCycleManager.shared.currentLifeCycle == .AppKilled {
-            DisplayedManager.saveDisplayed(received: notificationReceived)
+            _ = DisplayedManager.shared.saveDisplayed(received: notificationReceived)
         }
         else {
             AwesomeEventsReceiver
@@ -69,9 +69,9 @@ class BroadcastSender {
         actionReceived: ActionReceived,
         whenFinished completionHandler: @escaping (Bool, Error?) -> Void
     ){
-        if !ActionManager.recovered { //LifeCycleManager.shared.currentLifeCycle == .AppKilled
-            ActionManager.saveAction(received: actionReceived)
-            Logger.i(TAG, "action saved")
+        if !ActionManager.shared.recovered { //LifeCycleManager.shared.currentLifeCycle == .AppKilled
+            ActionManager.shared.saveAction(received: actionReceived)
+            Logger.shared.d(TAG, "action saved")
         }
         else {
             AwesomeEventsReceiver
@@ -79,7 +79,7 @@ class BroadcastSender {
                 .addActionEvent(
                     named: Definitions.BROADCAST_DEFAULT_ACTION,
                     with: actionReceived)
-            Logger.i(TAG, "action broadcasted")
+            Logger.shared.d(TAG, "action broadcasted")
         }
         
         completionHandler(true, nil)
@@ -90,7 +90,7 @@ class BroadcastSender {
         whenFinished completionHandler: @escaping (Bool, Error?) -> Void
     ){
         if LifeCycleManager.shared.currentLifeCycle == .AppKilled {
-            DismissedManager.saveDismissed(received: actionReceived)
+            DismissedManager.shared.saveDismissed(received: actionReceived)
         }
         else {
             AwesomeEventsReceiver

@@ -40,6 +40,21 @@ public class DefaultsManager {
         set { userDefaults.setValue(newValue, forKey: Definitions.ACTION_HANDLE) }
     }
     
+    public var createdCallback:Int64 {
+        get { return Int64(userDefaults.object(forKey: Definitions.CREATED_HANDLE) as? Int64 ?? 0) }
+        set { userDefaults.setValue(newValue, forKey: Definitions.CREATED_HANDLE) }
+    }
+    
+    public var displayedCallback:Int64 {
+        get { return Int64(userDefaults.object(forKey: Definitions.DISPLAYED_HANDLE) as? Int64 ?? 0) }
+        set { userDefaults.setValue(newValue, forKey: Definitions.DISPLAYED_HANDLE) }
+    }
+    
+    public var dismissedCallback:Int64 {
+        get { return Int64(userDefaults.object(forKey: Definitions.DISMISSED_HANDLE) as? Int64 ?? 0) }
+        set { userDefaults.setValue(newValue, forKey: Definitions.DISMISSED_HANDLE) }
+    }
+    
     public var backgroundCallback:Int64 {
         get { return Int64(userDefaults.object(forKey: Definitions.BACKGROUND_HANDLE) as? Int64 ?? 0) }
         set { userDefaults.setValue(newValue, forKey: Definitions.BACKGROUND_HANDLE) }
@@ -58,16 +73,11 @@ public class DefaultsManager {
     public var lastDisplayedDate:RealDateTime {
         get {
             let dateText:String? = userDefaults.object(forKey: Definitions.AWESOME_LAST_DISPLAYED_DATE) as? String
-            
-            Logger.d(TAG, "Awesome Notifications - UTC timezone : \(RealDateTime.utcTimeZone)")
-            Logger.d(TAG, "Awesome Notifications - Local timezone : \(DateUtils.shared.localTimeZone)")
-            
             guard let dateText:String = dateText else {
                 return RealDateTime.init(fromTimeZone: RealDateTime.utcTimeZone)
             }
             
-            Logger.d(TAG, "Awesome Notifications - last displayed date : \(dateText)")
-            
+            Logger.shared.d(TAG, "last displayed date recovered: \(dateText)")
             guard let lastDate:RealDateTime =
                                     RealDateTime.init(
                                         fromDateText: dateText,
@@ -78,18 +88,21 @@ public class DefaultsManager {
             
             return lastDate
         }
-        set { userDefaults.setValue(newValue.description, forKey: Definitions.AWESOME_LAST_DISPLAYED_DATE) }
     }
     
     
     public func registerLastDisplayedDate(){
-        self.lastDisplayedDate = RealDateTime.init(fromTimeZone: RealDateTime.utcTimeZone)
+        let nowDate = RealDateTime().description
+        userDefaults.setValue(
+            nowDate,
+            forKey: Definitions.AWESOME_LAST_DISPLAYED_DATE)
+        Logger.shared.d(TAG, "last displayed date registered: \(nowDate)")
     }
     
     public func checkIfAppGroupConnected() {
         let valueRestored:String? = userDefaults.object(forKey: Definitions.TEST_APP_GROUP) as? String
         if valueRestored?.isEmpty ?? true {
-            Logger.e(TAG, "App Groups are not successfully connected. Please, use '\(Definitions.USER_DEFAULT_TAG)' group name in your App Groups Capabilities.")
+            Logger.shared.e(TAG, "App Groups are not successfully connected. Please, use '\(Definitions.USER_DEFAULT_TAG)' group name in your App Groups Capabilities.")
         }
     }
 }

@@ -24,25 +24,30 @@ public class NotificationButtonModel : AbstractModel {
     
     public init(){}
     
-    public func fromMap(arguments: [String : Any?]?) -> AbstractModel? {
-        if(arguments == nil){ return self }
-       
-        _processRetroCompatibility(fromArguments: arguments)
+    public convenience init?(fromMap arguments: [String : Any?]?){
+        if arguments?.isEmpty ?? true { return nil }
         
-        self.key        = MapUtils<String>.getValueOrDefault(reference: Definitions.NOTIFICATION_BUTTON_KEY, arguments: arguments)
-        self.icon       = MapUtils<String>.getValueOrDefault(reference: Definitions.NOTIFICATION_BUTTON_ICON, arguments: arguments)
-        self.label      = MapUtils<String>.getValueOrDefault(reference: Definitions.NOTIFICATION_BUTTON_LABEL, arguments: arguments)
-        self.color      = MapUtils<Int64>.getValueOrDefault(reference: Definitions.NOTIFICATION_COLOR, arguments: arguments)
-        
-        self.actionType = EnumUtils<ActionType>.getEnumOrDefault(reference: Definitions.NOTIFICATION_ACTION_TYPE, arguments: arguments)
-        
-        self.enabled    = MapUtils<Bool>.getValueOrDefault(reference: Definitions.NOTIFICATION_ENABLED, arguments: arguments)
-        self.autoDismissible   = MapUtils<Bool>.getValueOrDefault(reference: Definitions.NOTIFICATION_AUTO_DISMISSIBLE, arguments: arguments)
-        self.requireInputText  = MapUtils<Bool>.getValueOrDefault(reference: Definitions.NOTIFICATION_REQUIRE_INPUT_TEXT, arguments: arguments)
-        self.showInCompactView = MapUtils<Bool>.getValueOrDefault(reference: Definitions.NOTIFICATION_SHOW_IN_COMPACT_VIEW, arguments: arguments)
-        self.isDangerousOption = MapUtils<Bool>.getValueOrDefault(reference: Definitions.NOTIFICATION_IS_DANGEROUS_OPTION, arguments: arguments)
-
-        return self
+        do {
+            self.init()
+            _processRetroCompatibility(fromArguments: arguments)
+            
+            self.key        = MapUtils<String>.getValueOrDefault(reference: Definitions.NOTIFICATION_BUTTON_KEY, arguments: arguments)
+            self.icon       = MapUtils<String>.getValueOrDefault(reference: Definitions.NOTIFICATION_BUTTON_ICON, arguments: arguments)
+            self.label      = MapUtils<String>.getValueOrDefault(reference: Definitions.NOTIFICATION_BUTTON_LABEL, arguments: arguments)
+            self.color      = MapUtils<Int64>.getValueOrDefault(reference: Definitions.NOTIFICATION_COLOR, arguments: arguments)
+            
+            self.actionType = EnumUtils<ActionType>.getEnumOrDefault(reference: Definitions.NOTIFICATION_ACTION_TYPE, arguments: arguments)
+            
+            self.enabled    = MapUtils<Bool>.getValueOrDefault(reference: Definitions.NOTIFICATION_ENABLED, arguments: arguments)
+            self.autoDismissible   = MapUtils<Bool>.getValueOrDefault(reference: Definitions.NOTIFICATION_AUTO_DISMISSIBLE, arguments: arguments)
+            self.requireInputText  = MapUtils<Bool>.getValueOrDefault(reference: Definitions.NOTIFICATION_REQUIRE_INPUT_TEXT, arguments: arguments)
+            self.showInCompactView = MapUtils<Bool>.getValueOrDefault(reference: Definitions.NOTIFICATION_SHOW_IN_COMPACT_VIEW, arguments: arguments)
+            self.isDangerousOption = MapUtils<Bool>.getValueOrDefault(reference: Definitions.NOTIFICATION_IS_DANGEROUS_OPTION, arguments: arguments)
+        }
+        catch {
+            Logger.shared.e(Self.TAG, error.localizedDescription)
+            return nil
+        }
     }
     
     public func toMap() -> [String : Any?] {
@@ -67,12 +72,12 @@ public class NotificationButtonModel : AbstractModel {
     func _processRetroCompatibility(fromArguments arguments: [String : Any?]?){
         
         if arguments?["autoCancel"] != nil {
-            Logger.w(NotificationButtonModel.TAG, "autoCancel is deprecated. Please use autoDismissible instead.")
+            Logger.shared.w(NotificationButtonModel.TAG, "autoCancel is deprecated. Please use autoDismissible instead.")
             autoDismissible = MapUtils<Bool>.getValueOrDefault(reference: "autoCancel", arguments: arguments)
         }
 
         if arguments?["buttonType"] != nil {
-            Logger.w(NotificationButtonModel.TAG, "buttonType is deprecated. Please use actionType instead.")            
+            Logger.shared.w(NotificationButtonModel.TAG, "buttonType is deprecated. Please use actionType instead.")            
             actionType = EnumUtils<ActionType>.getEnumOrDefault(reference: "buttonType", arguments: arguments)
         }
         
@@ -81,7 +86,7 @@ public class NotificationButtonModel : AbstractModel {
     
     func _adaptInputFieldToRequireText(){
         if actionType == ActionType.InputField {
-            Logger.d(NotificationButtonModel.TAG,
+            Logger.shared.d(NotificationButtonModel.TAG,
                   "InputField is deprecated. Please use requireInputText instead.")
             requireInputText = true
             actionType = ActionType.SilentAction

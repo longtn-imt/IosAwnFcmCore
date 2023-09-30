@@ -4,18 +4,82 @@ PODS:
   - FBSnapshotTestCase/Core (2.1.4)
   - FBSnapshotTestCase/SwiftSupport (2.1.4):
     - FBSnapshotTestCase/Core
-  - IosAwnCore (0.7.3)
-  - IosAwnFcmCore (0.7.3):
-    - IosAwnCore (= 0.7.3)
+  - Firebase/CoreOnly (10.15.0):
+    - FirebaseCore (= 10.15.0)
+  - Firebase/Messaging (10.15.0):
+    - Firebase/CoreOnly
+    - FirebaseMessaging (~> 10.15.0)
+  - FirebaseCore (10.15.0):
+    - FirebaseCoreInternal (~> 10.0)
+    - GoogleUtilities/Environment (~> 7.8)
+    - GoogleUtilities/Logger (~> 7.8)
+  - FirebaseCoreInternal (10.15.0):
+    - "GoogleUtilities/NSData+zlib (~> 7.8)"
+  - FirebaseInstallations (10.15.0):
+    - FirebaseCore (~> 10.0)
+    - GoogleUtilities/Environment (~> 7.8)
+    - GoogleUtilities/UserDefaults (~> 7.8)
+    - PromisesObjC (~> 2.1)
+  - FirebaseMessaging (10.15.0):
+    - FirebaseCore (~> 10.0)
+    - FirebaseInstallations (~> 10.0)
+    - GoogleDataTransport (~> 9.2)
+    - GoogleUtilities/AppDelegateSwizzler (~> 7.8)
+    - GoogleUtilities/Environment (~> 7.8)
+    - GoogleUtilities/Reachability (~> 7.8)
+    - GoogleUtilities/UserDefaults (~> 7.8)
+    - nanopb (< 2.30910.0, >= 2.30908.0)
+  - GoogleDataTransport (9.2.5):
+    - GoogleUtilities/Environment (~> 7.7)
+    - nanopb (< 2.30910.0, >= 2.30908.0)
+    - PromisesObjC (< 3.0, >= 1.2)
+  - GoogleUtilities/AppDelegateSwizzler (7.11.5):
+    - GoogleUtilities/Environment
+    - GoogleUtilities/Logger
+    - GoogleUtilities/Network
+  - GoogleUtilities/Environment (7.11.5):
+    - PromisesObjC (< 3.0, >= 1.2)
+  - GoogleUtilities/Logger (7.11.5):
+    - GoogleUtilities/Environment
+  - GoogleUtilities/Network (7.11.5):
+    - GoogleUtilities/Logger
+    - "GoogleUtilities/NSData+zlib"
+    - GoogleUtilities/Reachability
+  - "GoogleUtilities/NSData+zlib (7.11.5)"
+  - GoogleUtilities/Reachability (7.11.5):
+    - GoogleUtilities/Logger
+  - GoogleUtilities/UserDefaults (7.11.5):
+    - GoogleUtilities/Logger
+  - IosAwnCore (0.7.7)
+  - IosAwnFcmCore (0.7.6):
+    - Firebase/Messaging
+    - FirebaseCore
+    - IosAwnCore (~> 0.7.7)
+  - nanopb (2.30909.0):
+    - nanopb/decode (= 2.30909.0)
+    - nanopb/encode (= 2.30909.0)
+  - nanopb/decode (2.30909.0)
+  - nanopb/encode (2.30909.0)
+  - PromisesObjC (2.3.1)
 
 DEPENDENCIES:
   - FBSnapshotTestCase (~> 2.1.4)
+  - IosAwnCore (~> 0.7.7)
   - IosAwnFcmCore (from `../`)
 
 SPEC REPOS:
   trunk:
     - FBSnapshotTestCase
+    - Firebase
+    - FirebaseCore
+    - FirebaseCoreInternal
+    - FirebaseInstallations
+    - FirebaseMessaging
+    - GoogleDataTransport
+    - GoogleUtilities
     - IosAwnCore
+    - nanopb
+    - PromisesObjC
 
 EXTERNAL SOURCES:
   IosAwnFcmCore:
@@ -23,9 +87,18 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   FBSnapshotTestCase: 094f9f314decbabe373b87cc339bea235a63e07a
-  IosAwnCore: 6494e0e174d49f04f513e8a002187be226889a37
-  IosAwnFcmCore: 1946b9a6b46092d2faa8b3d50c9f715d15ab1438
+  Firebase: 66043bd4579e5b73811f96829c694c7af8d67435
+  FirebaseCore: 2cec518b43635f96afe7ac3a9c513e47558abd2e
+  FirebaseCoreInternal: 2f4bee5ed00301b5e56da0849268797a2dd31fb4
+  FirebaseInstallations: cae95cab0f965ce05b805189de1d4c70b11c76fb
+  FirebaseMessaging: 0c0ae1eb722ef0c07f7801e5ded8dccd1357d6d4
+  GoogleDataTransport: 54dee9d48d14580407f8f5fbf2f496e92437a2f2
+  GoogleUtilities: 13e2c67ede716b8741c7989e26893d151b2b2084
+  IosAwnCore: e80c4c73e642d0ee37ec1db5b8341a3a73a5217f
+  IosAwnFcmCore: c5cbf81aa13ae8c28484e8979fca9d3050f3ad2e
+  nanopb: b552cce312b6c8484180ef47159bc0f65a1f0431
+  PromisesObjC: c50d2056b5253dadbd6c2bea79b0674bd5a52fa4
 
-PODFILE CHECKSUM: 7b86520fcde7caa7e286ffd79c2c7c67cb002a97
+PODFILE CHECKSUM: 7d3d021e58eb83a3e0f14471a2b0b0e4c67747dd
 
-COCOAPODS: 1.11.3
+COCOAPODS: 1.13.0
