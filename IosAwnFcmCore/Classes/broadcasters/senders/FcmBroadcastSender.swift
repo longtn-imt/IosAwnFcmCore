@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import IosAwnCore
 
 public class FcmBroadcastSender {
     static let TAG:String = "FcmBroadcastSender"
@@ -35,18 +36,18 @@ public class FcmBroadcastSender {
         silentData: SilentDataModel,
         completionHandler: @escaping (Bool, Error?) -> Void
     ) throws -> Bool {
-    #if !ACTION_EXTENSION
-        let silentRequest:FcmSilentDataRequest =
-            FcmSilentDataRequest(
-                silentData: silentData,
-                handler: completionHandler)
-        
-        return try FcmBackgroundService
-                .shared
-                .enqueue(silentRequest: silentRequest)
-    #else
-        completionHandler(false, nil)
-        return false
-    #endif
+        if SwiftUtils.isRunningOnExtension() {
+            completionHandler(false, nil)
+            return false
+        } else {
+            let silentRequest:FcmSilentDataRequest =
+                FcmSilentDataRequest(
+                    silentData: silentData,
+                    handler: completionHandler)
+            
+            return try FcmBackgroundService
+                    .shared
+                    .enqueue(silentRequest: silentRequest)
+        }
     }
 }

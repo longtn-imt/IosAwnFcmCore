@@ -3,7 +3,7 @@ use_frameworks!
 platform :ios, '11.0'
 
 target 'IosAwnFcmCore_Example' do
-  pod 'IosAwnCore', '~> 0.7.7'#:path => '../../IosAwnCore/'#
+  pod 'IosAwnCore', '~> 0.9.1' #:path => '../../IosAwnCore/'#
   pod 'IosAwnFcmCore', :path => '../'
 
   target 'IosAwnFcmCore_Tests' do
@@ -16,7 +16,9 @@ end
 post_install do |installer|
   installer.pods_project.targets.each do |target|
     target.build_configurations.each do |config|
-      config.build_settings['BUILD_LIBRARY_FOR_DISTRIBUTION'] = 'YES'
+      if target.name == 'IosAwnCore' or target.name == 'IosAwnFcmCore'
+        config.build_settings['BUILD_LIBRARY_FOR_DISTRIBUTION'] = 'YES'
+      end
     end
   end
 end

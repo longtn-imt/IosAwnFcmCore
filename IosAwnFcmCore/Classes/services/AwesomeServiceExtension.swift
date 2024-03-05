@@ -21,20 +21,26 @@ open class AwesomeServiceExtension: UNNotificationServiceExtension {
         withContentHandler contentHandler: @escaping (UNNotificationContent) -> Void
     ){
         self.contentHandler = contentHandler
-        self.content = (request.content.mutableCopy() as? UNMutableNotificationContent)
+        guard var initialContent = (request.content.mutableCopy() as? UNMutableNotificationContent)
+        else {
+            contentHandler(request.content)
+            return
+        }
         
-        if let content = content {
-            _ = fcmService.handleRemoteNotification(
-                userInfo: content.userInfo,
-                completionHandler: { success, newContent, error in
+        self.content = initialContent
+        if var _ = content {
+            _ = fcmService.executeRemoteInstructions(
+                userInfo: initialContent.userInfo,
+                contentInProgress: &initialContent,
+                executeCompletion: { [self] success, mutableContent, error in
+                    let currentContent = mutableContent ?? self.content ?? UNMutableNotificationContent()
                     if success {
-                        contentHandler(newContent ?? content)
+                        contentHandler(currentContent)
                         return
                     }
                     else {
-                        let emptyContent = self.content ?? UNMutableNotificationContent()
-                        emptyContent.categoryIdentifier = "INVALID"
-                        contentHandler(emptyContent)
+                        currentContent.categoryIdentifier = "INVALID"
+                        contentHandler(currentContent)
                     }
                 })
         }

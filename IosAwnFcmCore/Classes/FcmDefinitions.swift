@@ -35,6 +35,23 @@ public enum FcmDefinitions {
     public static let  REMAINING_SILENT_DATA = "remainingSilentData"
     public static let  NOTIFICATION_SILENT_DATA = "silentData"
 
+    public static let  RPC_DISMISS = "dismiss"
+    public static let  RPC_DISMISS_BY_CHANNEL = "dismissByChannel"
+    public static let  RPC_DISMISS_BY_GROUP = "dismissByGroup"
+    public static let  RPC_DISMISS_ALL = "dismissAll"
+    
+    public static let  RPC_CANCEL_SCHEDULE = "cancelSchedule"
+    public static let  RPC_CANCEL_SCHEDULE_BY_CHANNEL = "cancelScheduleByChannel"
+    public static let  RPC_CANCEL_SCHEDULE_BY_GROUP = "cancelScheduleByGroup"
+    public static let  RPC_CANCEL_ALL_SCHEDULES = "cancelAllSchedules"
+    
+    public static let  RPC_CANCEL_NOTIFICATION = "cancelNotification"
+    public static let  RPC_CANCEL_NOTIFICATION_BY_CHANNEL = "cancelNotificationByChannel"
+    public static let  RPC_CANCEL_NOTIFICATION_BY_GROUP = "cancelNotificationByGroup"
+    public static let  RPC_CANCEL_ALL_NOTIFICATIONS = "cancelAllNotifications"
+    
+    public static let  RPC_STOP = "dontCallFlutter"
+    
     public static let  CHANNEL_METHOD_INITIALIZE = "initialize"
     public static let  CHANNEL_METHOD_PUSH_NEXT_DATA = "pushNext"
     public static let  CHANNEL_METHOD_GET_FCM_TOKEN = "getFirebaseToken"

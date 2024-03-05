@@ -8,9 +8,18 @@
 import Foundation
 import IosAwnCore
 
+enum LicenseErrorState {
+    case expired
+    case singleDoNotMatch
+    case withoutValidation
+}
+
 final public class LicenseManager {
     let TAG = "LicenseManager"
-    let APP_VERSION = "0.7.5-pre.1"
+    let LIB_VERSION = "0.9.0"
+    let LIB_DATE = 2024_01_02
+    
+    var licenseErrorState = LicenseErrorState.withoutValidation
     
     // ************** SINGLETON PATTERN ***********************
     
@@ -24,79 +33,117 @@ final public class LicenseManager {
     init(){}
 
     // ********************************************************
-        
+    
+    func isInDebugMode() -> Bool {
+        #if DEBUG
+            return true
+        #else
+            return false
+        #endif
+    }
+    
+    func splitIntoTwo(_ str: String, separator: String) -> [String] {
+        if let range = str.range(of: separator) {
+            let firstPart = String(str[..<range.lowerBound])
+            let secondPart = String(str[range.upperBound...])
+            return [firstPart, secondPart]
+        } else {
+            return [str]
+        }
+    }
+    
     public func isLicenseKeyValid() throws -> Bool {
         let licenseKeys:[String] = FcmDefaultsManager.shared.licenseKeys
-        if licenseKeys.isEmpty {
-            return false
-        }
+        if licenseKeys.isEmpty { return false }
         
         for licenseKey:String in licenseKeys {
             
-            var isSingleVersion:Bool = false
-            var base64Encoded:String? = nil
-            if licenseKey.starts(with: "single:") {
-                isSingleVersion = true
-                if !licenseKey.starts(with: "single:"+APP_VERSION+":") {
-                    continue
-                }
-                let regex = try! NSRegularExpression(pattern: "single:[\\w\\.\\+]+:", options: [])
-                let range = NSRange(location: 0, length: licenseKey.utf16.count)
-                base64Encoded = regex
-                    .stringByReplacingMatches(
-                        in: licenseKey,
-                        options: [],
-                        range: range,
-                        withTemplate: "")
-                
-            } else {
-                base64Encoded = licenseKey
+            let parts = splitIntoTwo(licenseKey, separator: "==")
+            if parts.count <= 1 {
+                licenseErrorState = .expired
+                continue
             }
             
+            var prefix = String(parts[0])
+            let base64Encoded = String(parts[1])
+            let isSingleVersion = prefix.starts(with: "single::")
+            
+            if isSingleVersion {
+                if !licenseKey.starts(with: "single::" + LIB_VERSION + "==") {
+                    licenseErrorState = .singleDoNotMatch
+                    continue
+                }
+                prefix = prefix.replacingOccurrences(of: "single::", with: "")
+            }
+            
+            let packageName = SwiftUtils.getMainBundle().bundleIdentifier!
             do {
                 let isValidated:Bool = try validateRSASignature(
-                    packageName:
-                        (isSingleVersion ? APP_VERSION+":" : "") +
-                        SwiftUtils.getMainBundle().bundleIdentifier!,
-                    licenseKey: base64Encoded!,
+                    signaturePrefix: prefix,
+                    packageName: packageName,
+                    licenseKey: base64Encoded,
                     publicKey: Crypto.pemPublicKey,
                     signProtocol: .rsaSignatureMessagePKCS1v15SHA256
                 )
-                if isValidated { return true }
+                if isValidated {
+                    if isSingleVersion {
+                        if LIB_VERSION == prefix { return true }
+                        licenseErrorState = .singleDoNotMatch
+                    } else {
+                        let licenseDate = Int(prefix.replacingOccurrences(of: "-", with: "")) ?? 0
+                        if LIB_DATE <= licenseDate + 10_000 { return true }
+                        licenseErrorState = .expired
+                    }
+                }
             } catch {
                 Logger.shared.e(TAG, error.localizedDescription)
                 Logger.shared.e(TAG, "Invalid license key: \(licenseKey)")
             }
         }
         printLicenseMessageError()
-        return false
+        return isInDebugMode()
     }
     
-    public func printValidationTest() throws -> Bool {
-        if try !isLicenseKeyValid() {
-            return false
-        }
-        else {
-            Logger.shared.d(TAG,"Awesome Notification's license key validated")
-            return true
-        }
-    }
-    
+    var isMessageAlreadyPrinted = false
     func printLicenseMessageError() {
-        Logger.shared.i(TAG,
-             "You need to insert a valid license key to use Awesome Notification's FCM " +
-                 "plugin in release mode without watermarks (Bundle ID: \"\(SwiftUtils.getMainBundle().bundleIdentifier ?? "")\"). " +
-             "To know more about it, please visit https://www.awesome-notifications.carda.me#prices")
+        if isMessageAlreadyPrinted { return }
+        isMessageAlreadyPrinted = true
+        
+        let licenseMessage: String
+        let packageName = Bundle.main.bundleIdentifier ?? "Unknown"
+        
+        switch licenseErrorState {
+            case .expired:
+                licenseMessage = "WARNING: The current licenses for Awesome Notifications does not cover this FCM plugin release. Please update your license to use the latest version of Awesome Notification's FCM plugin in release mode without watermarks. Application ID: \"\(packageName)\". Version: \(LIB_VERSION). For more information and to update your license, please visit https://awesome-notifications.carda.me#prices."
+            case .singleDoNotMatch:
+                licenseMessage = "WARNING: Your current single license key does not cover this version of the Awesome Notifications FCM plugin. Please upgrade your license to use this version of the plugin in release mode without limitations. Application ID: \"\(packageName)\". Version: \(LIB_VERSION). For more information and to upgrade your license, please visit https://awesome-notifications.carda.me#prices."
+            case .withoutValidation:
+                licenseMessage = "You need to insert a valid license key (Year 2) to use Awesome Notification's FCM plugin in release mode without watermarks (application id: \"\(packageName)\"). Version: \(LIB_VERSION). To know more about it, please visit https://awesome-notifications.carda.me#prices."
+        }
+
+        let isDebuggable = _isDebugAssertConfiguration()
+        
+        switch licenseErrorState {
+            case .expired, .singleDoNotMatch:
+                Logger.shared.w(TAG, licenseMessage)
+            case .withoutValidation:
+                if isDebuggable {
+                    Logger.shared.i(TAG, licenseMessage)
+                } else {
+                    Logger.shared.e(TAG, licenseMessage)
+                }
+        }
     }
     
     func validateRSASignature(
+        signaturePrefix:String,
         packageName:String,
         licenseKey:String,
         publicKey:String,
         signProtocol:SecKeyAlgorithm
     ) throws -> Bool {
         
-        guard let signedData: Data = packageName.data(using: .utf8),
+        guard let signedData: Data = (signaturePrefix+":"+packageName).data(using: .utf8),
               let signature: Data = Data(base64Encoded: licenseKey),
               let publicKeyData: Data = Data(base64Encoded: Crypto.pemPublicKey, options: [])
         else {

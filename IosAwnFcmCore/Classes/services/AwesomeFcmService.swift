@@ -9,15 +9,8 @@ import Foundation
 import IosAwnCore
 
 open class AwesomeFcmService {
-        
-    let TAG = "AwesomeFcmService"
-    
-    let contentInProgress:UNMutableNotificationContent = UNMutableNotificationContent()
-    var messageId:String?
-    var originalTitle:String?
-    var originalBody:String?
-    var originalBadge:Int?
-    var originalImage:String?
+    static let TAG = "AwesomeFcmService"
+    var contentInProgress:UNMutableNotificationContent?
     
     public init(){}
     
@@ -25,280 +18,588 @@ open class AwesomeFcmService {
         userInfo: [AnyHashable : Any],
         fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void
     ) -> Bool {
+        var contentInProgress = UNMutableNotificationContent()
+        self.contentInProgress = contentInProgress
         let start = DispatchTime.now()
-        let aps = userInfo["aps"] as? [String: AnyObject]
-        if aps?["content-available"] as? Int == 1 {
-            return handleSilentData(
-                        userInfo: userInfo,
-                        source: FcmSource.ReceiveRemote) { [self] success, error in
-                            if success {
-                                completionHandler(.newData)
-                            } else if error == nil {
-                                completionHandler(.noData)
-                            } else {
-                                completionHandler(.failed)
-                            }
-
-                            let end = DispatchTime.now()
-                            let nanoTime = end.uptimeNanoseconds - start.uptimeNanoseconds // <<<<< Difference in nano seconds (UInt64)
-                            let timeInterval:Double = Double(nanoTime) / 1_000_000_000 // Technically could overflow for long running tests
-                            Logger.shared.d(TAG, "Background silent push execution finished in \(timeInterval.rounded())ms")
-                        }
-        } else {
-            return handleRemoteNotification(
-                    userInfo: userInfo) { [self] success, notificationContent, error in
-                        if success {
-                            completionHandler(.newData)
-                        } else if error == nil {
-                            completionHandler(.noData)
-                        } else {
-                            completionHandler(.failed)
-                        }
-
-                        let end = DispatchTime.now()
-                        let nanoTime = end.uptimeNanoseconds - start.uptimeNanoseconds // <<<<< Difference in nano seconds (UInt64)
-                        let timeInterval:Double = Double(nanoTime) / 1_000_000_000 // Technically could overflow for long running tests
-                        Logger.shared.d(TAG, "Remote push notification execution finished in \(timeInterval.rounded())ms")
-                    }
-        }
+        return executeRemoteInstructions(
+            userInfo: userInfo,
+            contentInProgress: &contentInProgress) { success, _, error in
+                if success {
+                    completionHandler(.newData)
+                } else if error == nil {
+                    completionHandler(.noData)
+                } else {
+                    completionHandler(.failed)
+                }
+                
+                let end = DispatchTime.now()
+                let nanoTime = end.uptimeNanoseconds - start.uptimeNanoseconds // <<<<< Difference in nano seconds (UInt64)
+                let timeInterval:Double = Double(nanoTime) / 1_000_000_000 // Technically could overflow for long running tests
+                Logger.shared.d(AwesomeFcmService.TAG, "Push notification finished in \(timeInterval.rounded())ms")
+            }
     }
     
-    func handleRemoteNotification(
+    public func executeRemoteInstructions(
         userInfo: [AnyHashable : Any],
-        completionHandler: @escaping (Bool, UNNotificationContent?, Error?) -> Void
+        contentInProgress: inout UNMutableNotificationContent,
+        executeCompletion: @escaping (Bool, UNMutableNotificationContent?, Error?) -> ()
     ) -> Bool {
+        var modifiedUserInfo = userInfo
         
-        AwesomeNotifications.awesomeExtensions?.loadExternalExtensions()
-        DefaultsManager.shared.checkIfAppGroupConnected()
-        
-        let initialLifeCycle:NotificationLifeCycle = LifeCycleManager.shared.currentLifeCycle
-            
-        contentInProgress.title = ""
-        contentInProgress.body = ""
-        contentInProgress.userInfo = userInfo
-            
-        guard let messageId:String = userInfo["gcm.message_id"] as? String
-        else {
-            completionHandler(false, contentInProgress, nil)
-            return false
+        let notificationId: Int
+        if let messageIdString = getMessageIdInString(userInfo: userInfo),
+           let intValue = Int(messageIdString) {
+            notificationId = intValue
+        } else {
+            notificationId = -1
         }
-            
-        Logger.shared.d(TAG, "Received Firebase message id: "+(messageId))
-            
-        if let aps = userInfo["aps"] as? Dictionary<String, AnyObject> {
-            if let alert = aps["alert"]  as? Dictionary<String, AnyObject> {
-                originalTitle = alert["title"] as? String
-                originalBody  = alert["body"] as? String
+        
+        var dontCallFlutter = false
+        for (key, value) in modifiedUserInfo {
+            guard let stringKey = key as? String else {
+                continue
             }
-            originalBadge  = aps["badge"] as? Int
-        }
-        
-        if let options = userInfo["fcm_options"] as? NSDictionary {
-            originalImage = options["image"] as? String
-        }
-        
-        let isSilentData:Bool =
-                  StringUtils.shared.isNullOrEmpty(
-                        originalTitle,
-                        considerWhiteSpaceAsEmpty: false)
-                    &&
-                  StringUtils.shared.isNullOrEmpty(
-                        originalBody,
-                        considerWhiteSpaceAsEmpty: false)
             
-        if isSilentData {
-            completionHandler(false, contentInProgress, nil)
-            return false
+            if stringKey.hasPrefix("google.") || stringKey.hasPrefix("gcm.") {
+                modifiedUserInfo.removeValue(forKey: key)
+                continue
+            }
+            
+            do {
+                switch key as? String {
+                case FcmDefinitions.RPC_DISMISS:
+                    guard let values = MapUtils<[String]>.extractStringListFromValue(value)
+                    else {continue}
+                    try dismissNotifications(values)
+                    break
+
+                case FcmDefinitions.RPC_DISMISS_BY_CHANNEL:
+                    guard let values = MapUtils<[String]>.extractStringListFromValue(value)
+                    else {continue}
+                    try dismissNotificationsByChannel(values)
+                    break
+
+                case FcmDefinitions.RPC_DISMISS_BY_GROUP:
+                    guard let values = MapUtils<[String]>.extractStringListFromValue(value)
+                    else {continue}
+                    try dismissNotificationsByGroup(values)
+                    break
+
+                case FcmDefinitions.RPC_DISMISS_ALL:
+                    if let shouldDismissAll = value as? String {
+                        if shouldDismissAll == "true" {
+                            try dismissAllNotifications()
+                        }
+                        break
+                    }
+                    if let shouldDismissAll = value as? Bool{
+                        if shouldDismissAll {
+                            try dismissAllNotifications()
+                        }
+                        break
+                    }
+                    break
+                    
+                case FcmDefinitions.RPC_CANCEL_SCHEDULE:
+                    guard let values = MapUtils<[String]>.extractStringListFromValue(value)
+                    else {continue}
+                    try cancelSchedules(values)
+                    break
+
+                case FcmDefinitions.RPC_CANCEL_SCHEDULE_BY_CHANNEL:
+                    guard let values = MapUtils<[String]>.extractStringListFromValue(value)
+                    else {continue}
+                    try cancelSchedulesByChannel(values)
+                    break
+
+                case FcmDefinitions.RPC_CANCEL_SCHEDULE_BY_GROUP:
+                    guard let values = MapUtils<[String]>.extractStringListFromValue(value)
+                    else {continue}
+                    try cancelSchedulesByGroup(values)
+                    break
+
+                case FcmDefinitions.RPC_CANCEL_ALL_SCHEDULES:
+                    if let shouldDismissAll = value as? String {
+                        if shouldDismissAll == "true" {
+                            try cancelAllSchedules()
+                        }
+                        break
+                    }
+                    if let shouldDismissAll = value as? Bool{
+                        if shouldDismissAll {
+                            try cancelAllSchedules()
+                        }
+                        break
+                    }
+                    break
+                    
+                case FcmDefinitions.RPC_CANCEL_NOTIFICATION:
+                    guard let values = MapUtils<[String]>.extractStringListFromValue(value)
+                    else {continue}
+                    try cancelNotifications(values)
+                    break
+
+                case FcmDefinitions.RPC_CANCEL_NOTIFICATION_BY_CHANNEL:
+                    guard let values = MapUtils<[String]>.extractStringListFromValue(value)
+                    else {continue}
+                    try cancelNotificationsByChannel(values)
+                    break
+
+                case FcmDefinitions.RPC_CANCEL_NOTIFICATION_BY_GROUP:
+                    guard let values = MapUtils<[String]>.extractStringListFromValue(value)
+                    else {continue}
+                    try cancelNotificationsByGroup(values)
+                    break
+
+                case FcmDefinitions.RPC_CANCEL_ALL_NOTIFICATIONS:
+                    if let shouldDismissAll = value as? String {
+                        if shouldDismissAll == "true" {
+                            try cancelAllNotifications()
+                        }
+                        break
+                    }
+                    if let shouldDismissAll = value as? Bool{
+                        if shouldDismissAll {
+                            try cancelAllNotifications()
+                        }
+                        break
+                    }
+                    break
+                    
+                case FcmDefinitions.RPC_STOP:
+                    if let shouldStop = value as? String {
+                        dontCallFlutter = shouldStop == "true"
+                        break
+                    }
+                    if let shouldStop = value as? Bool{
+                        dontCallFlutter = shouldStop
+                        break
+                    }
+                    break
+
+                default:
+                    break
+                }
+            } catch {
+                continue
+            }
         }
         
         do {
-            try executeNotificationContent(
-                userInfo: userInfo,
-                initialLifeCycle: initialLifeCycle,
-                completion: completionHandler)
-            return true
-            
+            return try processPushContent(
+                userInfo: modifiedUserInfo,
+                notificationId: notificationId,
+                contentInProgress: &contentInProgress,
+                shouldStopIfSilent: dontCallFlutter,
+                completion: executeCompletion
+            )
         } catch {
-            completionHandler( false, contentInProgress, error )
+            if error is AwesomeNotificationsException {
+                executeCompletion(false, contentInProgress, error)
+                return false
+            }
+            
+            executeCompletion(
+                false,
+                contentInProgress,
+                ExceptionFactory
+                    .shared
+                    .createNewAwesomeException(
+                        className: AwesomeFcmService.TAG,
+                        code: ExceptionCode.CODE_INVALID_ARGUMENTS,
+                        message: "AwesomeFcmService failed to receive push content",
+                        detailedCode: ExceptionCode.DETAILED_INVALID_ARGUMENTS + ".processPushContent.invalid"))
+            return false
         }
-        return false
+    }
+    
+    func processPushContent(
+        userInfo: [AnyHashable : Any],
+        notificationId: Int,
+        contentInProgress: inout UNMutableNotificationContent,
+        shouldStopIfSilent: Bool,
+        completion: @escaping (Bool, UNMutableNotificationContent?, Error?) -> ()
+    ) throws -> Bool {
+        if isNotification(userInfo: userInfo) {
+            return try deliveryAwesomeNotifications(
+                userInfo: userInfo,
+                notificationId: notificationId,
+                contentInProgress: &contentInProgress,
+                completion: completion
+            )
+        } else {
+            if shouldStopIfSilent {
+                completion(true, contentInProgress, nil)
+            } else {
+                completion(try handleSilentData(
+                    userInfo: userInfo,
+                    source: FcmSource.ReceiveRemote
+                ), contentInProgress, nil)
+            }
+            return true
+        }
+    }
+    
+    func isNotification(userInfo: [AnyHashable : Any]) -> Bool {
+        let aps = userInfo["aps"] as? [String: AnyObject]
+        return aps?["content-available"] as? Int != 1
+    }
+    
+    func deliveryAwesomeNotifications(
+        userInfo: [AnyHashable : Any],
+        notificationId: Int,
+        contentInProgress: inout UNMutableNotificationContent,
+        completion: @escaping (Bool, UNMutableNotificationContent?, Error?) -> ()
+    ) throws -> Bool {
+        
+        AwesomeNotifications.awesomeExtensions?.loadExternalExtensions()
+        DefaultsManager.shared.checkIfAppGroupConnected()
+        let initialLifeCycle:NotificationLifeCycle = LifeCycleManager.shared.currentLifeCycle
+        
+        guard var notification:NotificationModel = try buildNotificationFrom(userInfo: userInfo)
+        else {
+            throw ExceptionFactory
+                    .shared
+                    .createNewAwesomeException(
+                        className: AwesomeFcmService.TAG,
+                        code: FcmExceptionCode.CODE_FCM_EXCEPTION,
+                        message: "Push notification content is invalid",
+                        detailedCode: FcmExceptionCode.DETAILED_FCM_EXCEPTION+".deliveryAwesomeNotifications")
+        }
+        
+        notification.content?.createdLifeCycle = initialLifeCycle
+        notification.content?.displayedLifeCycle = initialLifeCycle
+        contentInProgress.userInfo[Definitions.NOTIFICATION_MODEL_CONTENT] = notification.toMap()
+        
+        validateWatermark(notification: &notification, contentInProgress: &contentInProgress)
+        
+        if (userInfo["gcm.n.noui"] as? Bool) ?? false { return true }
+        
+        try NotificationSenderAndScheduler.send(
+            createdSource: NotificationSource.Firebase,
+            notificationModel: notification,
+            content: contentInProgress,
+            completion: completion,
+            appLifeCycle: LifeCycleManager.shared.currentLifeCycle)
+        return true
+    }
+    
+    func validateWatermark(
+        notification:inout NotificationModel,
+        contentInProgress: inout UNMutableNotificationContent
+    ) {
+        var isLicenseKeyValid = false
+        do {
+            isLicenseKeyValid = try LicenseManager.shared.isLicenseKeyValid()
+        }
+        catch {
+            if !(error is AwesomeNotificationsException) {
+                ExceptionFactory
+                    .shared
+                    .registerNewAwesomeException(
+                        className: AwesomeFcmService.TAG,
+                        code: ExceptionCode.CODE_INVALID_ARGUMENTS,
+                        message: "AwesomeFcmService received a invalid license key",
+                        detailedCode: ExceptionCode.DETAILED_INVALID_ARGUMENTS + ".isLicenseKeyValid.invalid")
+            }
+        }
+        if isLicenseKeyValid { return }
+        
+        contentInProgress.title = notification.content?.title ?? contentInProgress.title
+        contentInProgress.body = notification.content?.body ?? contentInProgress.body
+        
+        if !StringUtils.shared.isNullOrEmpty(contentInProgress.title) {
+            contentInProgress.title = "[DEMO] \(contentInProgress.title)"
+            notification.content?.title = contentInProgress.title
+        } else {
+            if !StringUtils.shared.isNullOrEmpty(contentInProgress.body) {
+                contentInProgress.body = "[DEMO] \(contentInProgress.body)"
+                notification.content?.body = contentInProgress.body
+            }
+        }
+    }
+    
+    func getMessageIdInString(userInfo: [AnyHashable : Any]) -> String?{
+        if let notificationId:String = userInfo["gcm.message_id"] as? String {
+            Logger.shared.d(AwesomeFcmService.TAG, "Received Firebase message id: "+(notificationId))
+            return notificationId
+        }
+        return nil
+    }
+    
+    func buildNotificationFrom(userInfo: [AnyHashable : Any]) throws -> NotificationModel? {
+        let standardNotificationContent:[String:Any] = receiveStandardNotification(userInfo: userInfo)
+        
+        var awesomeContent:[String:Any] = userInfo[Definitions.NOTIFICATION_MODEL_CONTENT] != nil
+                ? receiveAwesomeNotificationContent(userInfo: userInfo)
+                : JsonFlattener.shared.decode(flatMap: userInfo)
+        
+        if let awesomeIos = awesomeContent[Definitions.NOTIFICATION_MODEL_IOS] as? [String:Any] {
+            awesomeContent = MapUtils<[String:Any]>
+                .deepMerge(awesomeContent, awesomeIos) as [String : Any]
+        }
+        
+        awesomeContent = MapUtils<[String:Any]>
+            .deepMerge(standardNotificationContent, awesomeContent) as [String : Any]
+        let notification = NotificationModel(fromMap: awesomeContent)
+        
+        if notification?.content != nil && notification!.content!.channelKey == nil {
+            let channelList:[NotificationChannelModel] = ChannelManager.shared.listChannels()
+            notification!.content!.channelKey = channelList.first?.channelKey ?? "Miscellaneous"
+        }
+        return notification
+    }
+    
+    func receiveStandardNotification(userInfo: [AnyHashable : Any]) -> [String:Any]{
+        var map:[String:Any] = [:]
+        if let aps = userInfo["aps"] as? Dictionary<String, AnyObject> {
+            if let alert = aps["alert"]  as? Dictionary<String, AnyObject> {
+                if let title = alert["title"] as? String {
+                    map[Definitions.NOTIFICATION_TITLE] = title
+                }
+                if let body = alert["body"] as? String {
+                    map[Definitions.NOTIFICATION_BODY] = body
+                }
+            }
+            if let badge = aps["badge"] as? Int {
+                map[Definitions.NOTIFICATION_BADGE] = badge
+            }
+            if let locKey = aps["title-loc-key"] as? String {
+                map[Definitions.NOTIFICATION_TITLE_KEY] = locKey
+            }
+            if let locKey = aps["loc-key"] as? String {
+                map[Definitions.NOTIFICATION_BODY_KEY] = locKey
+            }
+            if let locArgs = aps["title-loc-args"] as? [String] {
+                map[Definitions.NOTIFICATION_TITLE_ARGS] = locArgs
+            }
+            if let locArgs = aps["loc-args"] as? [String] {
+                map[Definitions.NOTIFICATION_BODY_ARGS] = locArgs
+            }
+        }
+        
+        if let options = userInfo["fcm_options"] as? NSDictionary {
+            if let image = options["image"] as? String {
+                map[Definitions.NOTIFICATION_LAYOUT] = "BigPicture"
+                map[Definitions.NOTIFICATION_BIG_PICTURE] = image
+            }
+        }
+        return map.isEmpty ? map : [Definitions.NOTIFICATION_MODEL_CONTENT: map]
+    }
+    
+    func receiveAwesomeNotificationContent(userInfo: [AnyHashable : Any]) -> [String:Any]{
+        var mapData:[String:Any] = [:]
+        
+        mapData[Definitions.NOTIFICATION_MODEL_CONTENT]  = JsonUtils.fromJson(userInfo[Definitions.NOTIFICATION_MODEL_CONTENT] as? String)
+        mapData[Definitions.NOTIFICATION_MODEL_SCHEDULE] = JsonUtils.fromJson(userInfo[Definitions.NOTIFICATION_MODEL_SCHEDULE] as? String)
+        mapData[Definitions.NOTIFICATION_MODEL_BUTTONS]  = JsonUtils.fromJsonArr(userInfo[Definitions.NOTIFICATION_MODEL_BUTTONS] as? String)
+        mapData[Definitions.NOTIFICATION_MODEL_LOCALIZATIONS]  = JsonUtils.fromJson(userInfo[Definitions.NOTIFICATION_MODEL_LOCALIZATIONS] as? String)
+        mapData[Definitions.NOTIFICATION_MODEL_IOS]  = JsonUtils.fromJson(userInfo[Definitions.NOTIFICATION_MODEL_IOS] as? String)
+        
+        return mapData
     }
     
     func handleSilentData(
         userInfo: [AnyHashable : Any],
-        source: FcmSource,
-        completionHandler: @escaping (Bool, Error?) -> Void
-    ) -> Bool {
+        source: FcmSource
+    ) throws -> Bool {
         let initialLifeCycle:NotificationLifeCycle =
                 LifeCycleManager
                     .shared
                     .currentLifeCycle
         
-        do {
-            guard let messageId:String = userInfo["gcm.message_id"] as? String
-            else {
-                throw ExceptionFactory
-                      .shared
-                      .createNewAwesomeException(
-                          className: TAG,
-                          code: ExceptionCode.CODE_INVALID_ARGUMENTS,
-                          message: "message_id was not found in silent push data",
-                          detailedCode: ExceptionCode.DETAILED_REQUIRED_ARGUMENTS + ".handleSilentData.message_id")
-            }
-            
-            Logger.shared.d(TAG, "Received Firebase message id: " + messageId)
-            
-            guard let dataMap:[String:Any?] = userInfo as? [String:Any?] else {
-                throw ExceptionFactory
-                        .shared
-                        .createNewAwesomeException(
-                            className: TAG,
-                            code: FcmExceptionCode.CODE_FCM_EXCEPTION,
-                            message: "UserInfo could not be converted into data map",
-                            detailedCode: FcmExceptionCode.DETAILED_FCM_EXCEPTION+".handleSilentData.userInfo")
-            }
-            
-            guard let silentData:SilentDataModel = SilentDataModel(fromMap: dataMap)
-            else {
-                throw ExceptionFactory
-                        .shared
-                        .createNewAwesomeException(
-                            className: TAG,
-                            code: ExceptionCode.CODE_INVALID_ARGUMENTS,
-                            message: "AwesomeFcmService received a invalid silent data content",
-                            detailedCode: ExceptionCode.DETAILED_INVALID_ARGUMENTS + ".handleSilentData.invalid")
-            }
-            
-            silentData.registerCreationEvent(
-                    createdSource: .Firebase,
-                    createdLifeCycle: initialLifeCycle)
-            
-            return try FcmBroadcastSender
-                    .shared
-                    .SendBroadcastSilentData(
-                        silentData: silentData,
-                        completionHandler: completionHandler)
-            
-        } catch {
-            if error is AwesomeNotificationsException {
-                completionHandler(false, error)
-                return false
-            }
-            else {
-                completionHandler(
-                    false,
-                    ExceptionFactory
-                        .shared
-                        .createNewAwesomeException(
-                            className: TAG,
-                            code: ExceptionCode.CODE_INVALID_ARGUMENTS,
-                            message: "AwesomeFcmService received a invalid silent data content",
-                            detailedCode: ExceptionCode.DETAILED_INVALID_ARGUMENTS + ".handleSilentData.invalid"))
-                return false
-            }
-        }
-    }
-    
-    func executeNotificationContent(
-        userInfo: [AnyHashable : Any],
-        initialLifeCycle:NotificationLifeCycle,
-        completion completionHandler: @escaping (Bool, UNNotificationContent?, Error?) -> Void
-    ) throws {
+        Logger.shared.d(AwesomeFcmService.TAG, "Received silent Firebase push")
         
-        var notificationModel:NotificationModel? = nil
-        
-        if userInfo[Definitions.NOTIFICATION_MODEL_CONTENT] != nil {
-            
-            var mapData:[String:Any?] = [:]
-            
-            mapData[Definitions.NOTIFICATION_MODEL_CONTENT]  = JsonUtils.fromJson(userInfo[Definitions.NOTIFICATION_MODEL_CONTENT] as? String)
-            mapData[Definitions.NOTIFICATION_MODEL_SCHEDULE] = JsonUtils.fromJson(userInfo[Definitions.NOTIFICATION_MODEL_SCHEDULE] as? String)
-            mapData[Definitions.NOTIFICATION_MODEL_BUTTONS]  = JsonUtils.fromJsonArr(userInfo[Definitions.NOTIFICATION_MODEL_BUTTONS] as? String)
-            mapData[Definitions.NOTIFICATION_MODEL_LOCALIZATIONS]  = JsonUtils.fromJson(userInfo[Definitions.NOTIFICATION_MODEL_LOCALIZATIONS] as? String)
-                        
-            if (userInfo[Definitions.NOTIFICATION_MODEL_IOS] != nil) {
-                let iosCustomData:[String:Any?]? = JsonUtils.fromJson(userInfo[Definitions.NOTIFICATION_MODEL_IOS] as? String)
-                if iosCustomData != nil {
-                    mapData = MapUtils<[String:Any?]>.deepMerge(mapData, iosCustomData!)
-                }
-            }
-            
-            notificationModel = NotificationModel(fromMap: mapData)
-            if notificationModel == nil {
-                throw ExceptionFactory
+        guard let dataMap:[String:Any?] = userInfo as? [String:Any?] else {
+            throw ExceptionFactory
                     .shared
                     .createNewAwesomeException(
-                        className: TAG,
-                        code: ExceptionCode.CODE_INVALID_ARGUMENTS,
-                        message: "AwesomeFcmService received a invalid awesome notification content",
-                        detailedCode: ExceptionCode.DETAILED_INVALID_ARGUMENTS+".notificationModel.invalid")
-            }
-            
-            originalTitle = notificationModel!.content?.title ?? originalTitle
-            originalBody = notificationModel!.content?.body ?? originalBody
-            originalBadge = notificationModel!.content?.badge ?? originalBadge
-            
+                        className: AwesomeFcmService.TAG,
+                        code: FcmExceptionCode.CODE_FCM_EXCEPTION,
+                        message: "UserInfo could not be converted into data map",
+                        detailedCode: FcmExceptionCode.DETAILED_FCM_EXCEPTION+".handleSilentData.userInfo")
         }
+        
+        guard let silentData:SilentDataModel = SilentDataModel(fromMap: dataMap)
         else {
-            notificationModel = NotificationModel()
-            notificationModel!.content = NotificationContentModel()
-            
-            let channelList:[NotificationChannelModel] = ChannelManager.shared.listChannels()
-            
-            notificationModel!.content!.id = -1
-            notificationModel!.content!.channelKey = channelList.first?.channelKey ?? "basic_channel"
-            notificationModel!.content!.title = originalTitle
-            notificationModel!.content!.body = originalBody
-            notificationModel!.content!.badge = originalBadge
-            notificationModel!.content!.playSound = true
-            
-            if !StringUtils.shared.isNullOrEmpty(originalImage) {
-                notificationModel!.content!.notificationLayout = NotificationLayout.BigPicture
-                notificationModel!.content!.bigPicture = originalImage
-            }
-            else {
-                notificationModel!.content!.notificationLayout = NotificationLayout.Default
-            }
+            throw ExceptionFactory
+                    .shared
+                    .createNewAwesomeException(
+                        className: AwesomeFcmService.TAG,
+                        code: ExceptionCode.CODE_INVALID_ARGUMENTS,
+                        message: "AwesomeFcmService received a invalid silent data content",
+                        detailedCode: ExceptionCode.DETAILED_INVALID_ARGUMENTS + ".handleSilentData.invalid")
         }
         
-        Logger.shared.d(TAG, "Push notification received")
+        silentData.registerCreationEvent(
+                createdSource: .Firebase,
+                createdLifeCycle: initialLifeCycle)
         
-        do {
-            
-#if DEBUG   // Debug Mode
-            
-#else
-            let isValid:Bool = try LicenseManager.shared.isLicenseKeyValid()
-            if !isValid {
-                if !StringUtils.shared.isNullOrEmpty(originalTitle) {
-                    originalTitle = "[DEMO] " + originalTitle!
-                } else{
-                    if StringUtils.shared.isNullOrEmpty(originalBody) {
-                        originalBody = "[DEMO] " + originalBody!
-                    }
-                }
+        return try FcmBroadcastSender
+            .shared
+            .SendBroadcastSilentData(silentData: silentData) { success, error in
+                if success { return }
+                if error is AwesomeNotificationsException { return }
+                ExceptionFactory
+                    .shared
+                    .registerNewAwesomeException(
+                        className: AwesomeFcmService.TAG,
+                        code: ExceptionCode.CODE_INVALID_ARGUMENTS,
+                        message: "AwesomeFcmService couldnt broadcast silent data content",
+                        detailedCode: ExceptionCode.DETAILED_INVALID_ARGUMENTS + ".SendBroadcastSilentData.unavailable")
             }
-#endif
-            
-            notificationModel!.content!.title = originalTitle
-            notificationModel!.content!.body = originalBody
-            notificationModel!.content!.badge = originalBadge
-            
-            contentInProgress.userInfo[Definitions.NOTIFICATION_MODEL_CONTENT] = notificationModel!.toMap()
-            
-            try NotificationSenderAndScheduler.send(
-                createdSource: NotificationSource.Firebase,
-                notificationModel: notificationModel!,
-                content: contentInProgress,
-                completion: completionHandler,
-                appLifeCycle: LifeCycleManager.shared.currentLifeCycle)
-        }
-        catch {
-            completionHandler(false, UNNotificationContent(), error)
-        }
     }
     
     func handleRemoteWillExpire() -> UNNotificationContent {
-        return contentInProgress
+        return contentInProgress ?? UNMutableNotificationContent()
+    }
+    
+    func dismissNotifications(_ identifiers: [String]) throws {
+        identifiers.forEach { identifier in
+            if let id:Int = Int(identifier) {
+                let success:Bool =
+                        CancellationManager
+                            .shared
+                            .dismissNotification(byId: id)
+                
+                if success && AwesomeNotifications.debug {
+                    Logger.shared.d(AwesomeFcmService.TAG, "Notification id \(id) dismissed")
+                }
+            }
+        }
+    }
+    func dismissNotificationsByChannel(_ channels: [String]) throws {
+        channels.forEach { channel in
+            let success:Bool =
+            CancellationManager
+                .shared
+                .dismissNotifications(byChannelKey: channel)
+            
+            if success && AwesomeNotifications.debug {
+                Logger.shared.d(AwesomeFcmService.TAG, "Notifications dismissed by channel \(channel)")
+            }
+        }
+    }
+    func dismissNotificationsByGroup(_ groups: [String]) throws {
+        groups.forEach { group in
+            let success:Bool =
+            CancellationManager
+                .shared
+                .dismissNotifications(byGroupKey: group)
+            
+            if success && AwesomeNotifications.debug {
+                Logger.shared.d(AwesomeFcmService.TAG, "Notifications dismissed by group \(group)")
+            }
+        }
+    }
+    func dismissAllNotifications() throws {
+        let success:Bool =
+                CancellationManager
+                    .shared
+                    .dismissAllNotifications()
+        
+        if success && AwesomeNotifications.debug {
+            Logger.shared.d(AwesomeFcmService.TAG, "All notifications was dismissed")
+        }
+    }
+    
+    
+    func cancelSchedules(_ identifiers: [String]) throws {
+        identifiers.forEach { identifier in
+            if let id:Int = Int(identifier) {
+                let success:Bool =
+                        CancellationManager
+                            .shared
+                            .cancelSchedule(byId: id)
+                
+                if success && AwesomeNotifications.debug {
+                    Logger.shared.d(AwesomeFcmService.TAG, "Schedule id \(id) cancelled")
+                }
+            }
+        }
+    }
+    func cancelSchedulesByChannel(_ channels: [String]) throws {
+        channels.forEach { channel in
+            let success:Bool =
+            CancellationManager
+                .shared
+                .cancelSchedules(byChannelKey: channel)
+            
+            if success && AwesomeNotifications.debug {
+                Logger.shared.d(AwesomeFcmService.TAG, "Schedules cancelled by channel \(channel)")
+            }
+        }
+    }
+    func cancelSchedulesByGroup(_ groups: [String]) throws {
+        groups.forEach { group in
+            let success:Bool =
+            CancellationManager
+                .shared
+                .cancelSchedules(byGroupKey: group)
+            
+            if success && AwesomeNotifications.debug {
+                Logger.shared.d(AwesomeFcmService.TAG, "Schedules cancelled by group \(group)")
+            }
+        }
+    }
+    func cancelAllSchedules() throws {
+        let success:Bool =
+                CancellationManager
+                    .shared
+                    .cancelAllSchedules()
+        
+        if success && AwesomeNotifications.debug {
+            Logger.shared.d(AwesomeFcmService.TAG, "All schedules was cancelled")
+        }
+    }
+    
+    
+    func cancelNotifications(_ identifiers: [String]) throws {
+        identifiers.forEach { identifier in
+            if let id:Int = Int(identifier) {
+                let success:Bool =
+                        CancellationManager
+                            .shared
+                            .cancelNotification(byId: id)
+                
+                if success && AwesomeNotifications.debug {
+                    Logger.shared.d(AwesomeFcmService.TAG, "Notification id \(id) cancelled")
+                }
+            }
+        }
+    }
+    func cancelNotificationsByChannel(_ channels: [String]) throws {
+        channels.forEach { channel in
+            let success:Bool =
+            CancellationManager
+                .shared
+                .cancelNotifications(byChannelKey: channel)
+            
+            if success && AwesomeNotifications.debug {
+                Logger.shared.d(AwesomeFcmService.TAG, "Notifications cancelled by channel \(channel)")
+            }
+        }
+    }
+    func cancelNotificationsByGroup(_ groups: [String]) throws {
+        groups.forEach { group in
+            let success:Bool =
+            CancellationManager
+                .shared
+                .cancelNotifications(byGroupKey: group)
+            
+            if success && AwesomeNotifications.debug {
+                Logger.shared.d(AwesomeFcmService.TAG, "Notifications cancelled by group \(group)")
+            }
+        }
+    }
+    func cancelAllNotifications() throws {
+        let success:Bool =
+                CancellationManager
+                    .shared
+                    .cancelAllNotifications()
+        
+        if success && AwesomeNotifications.debug {
+            Logger.shared.d(AwesomeFcmService.TAG, "All notifications was cancelled")
+        }
     }
 }
