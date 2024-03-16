@@ -67,7 +67,8 @@ open class AwesomeFcmService {
             
             do {
                 switch key as? String {
-                case FcmDefinitions.RPC_DISMISS:
+                case FcmDefinitions.RPC_DISMISS,
+                    FcmDefinitions.RPC_DISMISS_BY_ID:
                     guard let values = MapUtils<[String]>.extractStringListFromValue(value)
                     else {continue}
                     try dismissNotifications(values)
