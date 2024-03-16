@@ -36,6 +36,7 @@ public enum FcmDefinitions {
     public static let  NOTIFICATION_SILENT_DATA = "silentData"
 
     public static let  RPC_DISMISS = "dismiss"
+    public static let  RPC_DISMISS_BY_ID = "dismissById"
     public static let  RPC_DISMISS_BY_CHANNEL = "dismissByChannel"
     public static let  RPC_DISMISS_BY_GROUP = "dismissByGroup"
     public static let  RPC_DISMISS_ALL = "dismissAll"

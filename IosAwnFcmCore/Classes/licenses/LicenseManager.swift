@@ -16,8 +16,8 @@ enum LicenseErrorState {
 
 final public class LicenseManager {
     let TAG = "LicenseManager"
-    let LIB_VERSION = "0.9.0"
-    let LIB_DATE = 2024_01_02
+    let LIB_VERSION = "0.9.3"
+    let LIB_DATE = 2024_03_15
     
     var licenseErrorState = LicenseErrorState.withoutValidation
     
@@ -33,15 +33,7 @@ final public class LicenseManager {
     init(){}
 
     // ********************************************************
-    
-    func isInDebugMode() -> Bool {
-        #if DEBUG
-            return true
-        #else
-            return false
-        #endif
-    }
-    
+        
     func splitIntoTwo(_ str: String, separator: String) -> [String] {
         if let range = str.range(of: separator) {
             let firstPart = String(str[..<range.lowerBound])
@@ -53,7 +45,8 @@ final public class LicenseManager {
     }
     
     public func isLicenseKeyValid() throws -> Bool {
-        let licenseKeys:[String] = FcmDefaultsManager.shared.licenseKeys
+        guard let licenseKeys:[String] = FcmDefaultsManager.shared.licenseKeys
+        else { return true }
         if licenseKeys.isEmpty { return false }
         
         for licenseKey:String in licenseKeys {
@@ -101,7 +94,7 @@ final public class LicenseManager {
             }
         }
         printLicenseMessageError()
-        return isInDebugMode()
+        return false
     }
     
     var isMessageAlreadyPrinted = false
