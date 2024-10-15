@@ -1,3 +1,53 @@
-Copyright (c) 2022 Rafael Setragni <40064496+rafaelsetragni@users.noreply.github.com>
+# Software License Agreement
 
-Unauthorized changes of this file, via any medium is strictly prohibited, the original source code content is proprietary and confidential. The free use is 100% authorized for development stage and for production release only with respective license acquisition.
+**Copyright (c) 2024 Carda.me Software LTDA**
+<40064496+rafaelsetragni@users.noreply.github.com>
+
+---
+
+## 1. Grant of License
+
+Subject to the terms and conditions of this License, permission is hereby granted to any individual or entity to:
+
+- Use the software freely for **development purposes only**, without modifying it.
+- Read the source code freely for **study or auditing purposes only**, without modifying it.
+- Deploy the software in **production environments only** with the acquisition of the appropriate license from the original creator, **Carda.me Software LTDA**, without modifying it.
+
+---
+
+## 2. Restrictions
+
+You are expressly prohibited from:
+
+- **Modifying, altering, or adapting** the original source code in any way without the explicit prior written consent from **Carda.me Software LTDA**.
+- **Redistributing or republishing** the source code or any derivative works, whether in original or modified form, by any means or medium.
+- Using the software in production without a valid license acquisition.
+
+---
+
+## 3. Ownership and Confidentiality
+
+The original source code is proprietary and remains the exclusive property of **Carda.me Software LTDA**.
+It is confidential and protected under applicable copyright law. Unauthorized access, modification, or redistribution constitutes a breach of this License and may result in legal action.
+
+---
+
+## 4. Disclaimer of Warranty
+
+The software is provided "as-is" without warranty of any kind, express or implied, including but not limited to warranties of merchantability, fitness for a particular purpose, or non-infringement. The entire risk of using the software lies with the user.
+
+---
+
+## 5. Limitation of Liability
+
+In no event shall the copyright holder or licensors be liable for any claim, damages, or other liability, whether in an action of contract, tort, or otherwise, arising from, out of, or in connection with the software or the use of other dealings in the software.
+
+---
+
+## 6. Termination
+
+Any violation of the terms outlined in this License will result in the immediate termination of the granted rights. Upon termination, you must cease all use of the software and destroy all copies, full or partial, in your possession.
+
+---
+
+By using the software, you acknowledge that you have read, understood, and agreed to be bound by the terms of this License. For production use, contact **Carda.me** for the appropriate license acquisition.

@@ -26,7 +26,7 @@ Rafael Setragni, 40064496+rafaelsetragni@users.noreply.github.com
 
 ## License
 
-IosAwnFcmCore is available under the MIT license. See the LICENSE file for more info.
+IosAwnFcmCore is available under Source Available license. See the LICENSE file for more info.
 
 
 xcodebuild archive -scheme IosAwnFcmCore -destination "generic/platform=iOS" -archivePath build/IosAwnFcmCore-iOS SKIP_INSTALL=NO BUILD_LIBRARY_FOR_DISTRIBUTION=YES
