@@ -1,9 +1,9 @@
 use_frameworks!
 
-platform :ios, '11.0'
+platform :ios, '12.0'
 
 target 'IosAwnFcmCore_Example' do
-  pod 'IosAwnCore', '~> 0.9.3' #:path => '../../IosAwnCore/' #
+  pod 'IosAwnCore' #, :path => '../../IosAwnCore/' #'~> 0.10.0' #
   pod 'IosAwnFcmCore', :path => '../'
 
   target 'IosAwnFcmCore_Tests' do
