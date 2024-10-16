@@ -8,7 +8,7 @@
 
 Pod::Spec.new do |s|
   s.name             = 'IosAwnFcmCore'
-  s.version          = '0.10.0'
+  s.version          = '0.10.1'
   s.summary          = 'Awesome Notifications Firebase Messaging Core.'
 
   s.description      = <<-DESC
