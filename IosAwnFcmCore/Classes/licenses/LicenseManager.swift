@@ -16,8 +16,8 @@ enum LicenseErrorState {
 
 final public class LicenseManager {
     let TAG = "LicenseManager"
-    let LIB_VERSION = "0.9.3"
-    let LIB_DATE = 2024_03_15
+    let LIB_VERSION = "0.10.0"
+    let LIB_DATE = 2024_10_11
     
     var licenseErrorState = LicenseErrorState.withoutValidation
     
