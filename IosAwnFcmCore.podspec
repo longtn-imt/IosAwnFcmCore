@@ -1,5 +1,5 @@
 #
-# Be sure to run `pod lib lint IosAwnFcmCore.podspec' to ensure this is a
+# Be sure to run `pod lib lint IosAwnFcmCore.podspec` to ensure this is a
 # valid spec before submitting.
 #
 # Any lines starting with a # are optional, but their use is encouraged
@@ -11,12 +11,11 @@ Pod::Spec.new do |s|
   s.version          = '0.10.0'
   s.summary          = 'Awesome Notifications Firebase Messaging Core.'
 
-
   s.description      = <<-DESC
 TODO: Add long description of the pod here.
                        DESC
 
-  s.homepage         = 'https://github.com/Rafael Setragni/IosAwnFcmCore'
+  s.homepage         = 'https://github.com/rafaelsetragni/IosAwnFcmCore'
   # s.screenshots     = 'www.example.com/screenshots_1', 'www.example.com/screenshots_2'
   s.license          = { :type => 'Copyright', :file => 'LICENSE' }
   s.author           = { 'Rafael Setragni' => '40064496+rafaelsetragni@users.noreply.github.com' }
@@ -24,8 +23,9 @@ TODO: Add long description of the pod here.
   # s.social_media_url = 'https://twitter.com/<TWITTER_USERNAME>'
 
   s.dependency 'IosAwnCore', '~> 0.10.0'
-  s.dependency 'FirebaseCore'
-  s.dependency 'Firebase/Messaging'
+  s.dependency 'FirebaseCore', '~> 11.3.0'
+  s.dependency 'Firebase/Messaging', '~> 11.3.0'
+  s.dependency 'GoogleUtilities', '~> 8.0.2'
 
   s.source_files = 'IosAwnFcmCore/Classes/**/*'
   
