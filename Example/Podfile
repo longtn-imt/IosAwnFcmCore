@@ -5,7 +5,7 @@ platform :ios, '13.0'
 target 'IosAwnFcmCore_Example' do
   pod 'IosAwnCore' #, :path => '../../IosAwnCore/' #'~> 0.10.0' #
   pod 'IosAwnFcmCore', :path => '../'
-
+  
   target 'IosAwnFcmCore_Tests' do
     inherit! :search_paths
 

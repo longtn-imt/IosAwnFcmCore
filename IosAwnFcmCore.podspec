@@ -12,7 +12,7 @@ Pod::Spec.new do |s|
   s.summary          = 'Awesome Notifications Firebase Messaging Core.'
 
   s.description      = <<-DESC
-TODO: Add long description of the pod here.
+  Awesome Notifications Firebase Messaging Core to enable push notifications using all awesome notification features
                        DESC
 
   s.homepage         = 'https://github.com/rafaelsetragni/IosAwnFcmCore'
@@ -30,7 +30,7 @@ TODO: Add long description of the pod here.
   s.source_files = 'IosAwnFcmCore/Classes/**/*'
   
   s.static_framework = true
-  s.platform = :ios, '12.0'
+  s.platform = :ios, '13.0'
   s.swift_version = '5.3'
   
   s.pod_target_xcconfig = {
