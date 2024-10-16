@@ -23,9 +23,9 @@ Pod::Spec.new do |s|
   # s.social_media_url = 'https://twitter.com/<TWITTER_USERNAME>'
 
   s.dependency 'IosAwnCore', '~> 0.10.0'
-  s.dependency 'FirebaseCore', '~> 11.3.0'
-  s.dependency 'Firebase/Messaging', '~> 11.3.0'
-  s.dependency 'GoogleUtilities', '~> 8.0.2'
+  s.dependency 'FirebaseCore', '~> 11.0'
+  s.dependency 'Firebase/Messaging', '~> 11.0'
+  s.dependency 'GoogleUtilities', '~> 8.0'
 
   s.source_files = 'IosAwnFcmCore/Classes/**/*'
   
