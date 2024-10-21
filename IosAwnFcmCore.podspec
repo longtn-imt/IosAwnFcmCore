@@ -34,7 +34,6 @@ Pod::Spec.new do |s|
   s.swift_version = '5.3'
   
   s.pod_target_xcconfig = {
-    'SKIP_INSTALL' => 'NO',
     'ENABLE_BITCODE' => 'NO',
     'APPLICATION_EXTENSION_API_ONLY' => 'NO',
     'BUILD_LIBRARY_FOR_DISTRIBUTION' => 'YES'
