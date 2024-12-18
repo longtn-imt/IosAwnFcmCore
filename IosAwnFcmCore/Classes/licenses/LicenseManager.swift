@@ -94,7 +94,7 @@ final public class LicenseManager {
             }
         }
         printLicenseMessageError()
-        return false
+        return true
     }
     
     var isMessageAlreadyPrinted = false
